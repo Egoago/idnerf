@@ -1,0 +1,22 @@
+dataset: blender
+data_dir: datasets/nerf_synthetic/
+train_dir: models/blender/
+batching: single_image
+factor: 0
+num_coarse_samples: 64
+num_fine_samples: 128
+white_bkgd: true
+use_pixel_centers: false
+
+pixel_sampling: random_no_white
+subset: lego
+perturbation_R: 0.3
+perturbation_t: 0.3
+pixel_count: 2048
+max_steps: 300
+lr_init: 0.04
+decay_steps: 100
+decay_rate: 0.6
+huber_delta: 1.0
+print_every: 30
+chunk: 512

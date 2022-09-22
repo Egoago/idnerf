@@ -1,0 +1,17 @@
+Tasks
+
+per pixel gradient per dim histogram
+translation-rotation error ##DONE##
+white mask
+	reference image - pixel sampling
+	rendered image - mask
+Huber loss ##DONE##
+XLA <-> vmap
+SGD test
+One image convergence region
+Asserts? Sanity checks
+synthetic -> llff
+
+Bunde adjusted Inverse Neural Radiance field Relocalisation with RGBD images
+Bundle adjusted relocalisation based on Implicit Neural radiance fields with RGBD images
+RGBD image sequence relocalization with Inverse Neural Radiance fields
