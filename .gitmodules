@@ -1,0 +1,3 @@
+[submodule "jaxnerf"]
+	path = jaxnerf
+	url = git@github.com:Egoago/jaxnerf.git
