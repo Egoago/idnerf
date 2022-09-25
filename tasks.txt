@@ -3,10 +3,13 @@ Tasks
 per pixel gradient per dim histogram
 translation-rotation error ##DONE##
 white mask
-	reference image - pixel sampling
-	rendered image - mask
+	reference image - pixel sampling ##DONE##
+	rendered image - mask ##DONE##
 Huber loss ##DONE##
 XLA <-> vmap
+feature points
+draw image
+saving test results
 SGD test
 One image convergence region
 Asserts? Sanity checks

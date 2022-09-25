@@ -7,16 +7,17 @@ num_coarse_samples: 64
 num_fine_samples: 128
 white_bkgd: true
 use_pixel_centers: false
+distributed_render: false
 
 pixel_sampling: random_no_white
 subset: lego
-perturbation_R: 0.3
+perturbation_R: 0.1
 perturbation_t: 0.3
-pixel_count: 2048
+pixel_count: 1024
 max_steps: 300
-lr_init: 0.04
+lr_init: 0.02
 decay_steps: 100
 decay_rate: 0.6
 huber_delta: 1.0
 print_every: 30
-chunk: 512
+chunk: 1024
