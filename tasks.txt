@@ -1,20 +1,21 @@
-Tasks
+RGBD image sequence relocalization with Inverse Neural Radiance fields
 
+==== TBD ====
+Asserts? Sanity checks
+
+==== IN PROGRESS ====
 per pixel gradient per dim histogram
-translation-rotation error ##DONE##
-white mask
-	reference image - pixel sampling ##DONE##
-	rendered image - mask ##DONE##
-Huber loss ##DONE##
-XLA <-> vmap
-feature points
-draw image
-saving test results
 SGD test
 One image convergence region
-Asserts? Sanity checks
 synthetic -> llff
 
-Bunde adjusted Inverse Neural Radiance field Relocalisation with RGBD images
-Bundle adjusted relocalisation based on Implicit Neural radiance fields with RGBD images
-RGBD image sequence relocalization with Inverse Neural Radiance fields
+==== DONE ====
+Huber loss
+white mask
+	reference image - pixel sampling
+	rendered image - mask
+translation-rotation error
+XLA <-> vmap
+draw image
+feature points
+saving test results
