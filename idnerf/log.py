@@ -7,6 +7,7 @@ import jaxlie
 from absl import flags
 from matplotlib import pyplot as plt
 
+from idnerf.dataset import get_frame
 from idnerf.renderer import Renderer
 
 
@@ -38,9 +39,9 @@ def save_graph(history, file_path):
     plt.savefig(file_path)
 
 
-def save_render(history, file_path, renderer, rng):
+def save_render(history, file_path, renderer, rng, rgbdm_img):
     rng_keys = jax.random.split(rng, 3)
-    img_true, disp_true = renderer.render_img(history['T_true'].as_matrix(), rng_keys[0])
+    img_true, disp_true = rgbdm_img[:, :, :3], rgbdm_img[:, :, 3]
     img_init, disp_init = renderer.render_img(history['T_init'].as_matrix(), rng_keys[1])
     img_final, disp_final = renderer.render_img(history['T_final'].as_matrix(), rng_keys[2])
     fig, axs = plt.subplots(2, 3, figsize=(24, 16), sharex=True, sharey=True)
@@ -68,6 +69,7 @@ def compute_errors(T_true: jaxlie.SE3, T_pred: jaxlie.SE3):
 def save_log(history, file_name):
     params = ['dataset',
               'subset',
+              'frame_idx',
               'pixel_sampling',
               'perturbation_R',
               'perturbation_t',
@@ -99,13 +101,16 @@ def save_log(history, file_name):
         json.dump(history, fp)
 
 
-def save_history(history, renderer: Renderer, rng):
+def save_history(history, renderer: Renderer, rng, rgbdm_img, mode="grl"):
     directory = flags.FLAGS.result_dir
     if not os.path.exists(directory):
         os.makedirs(directory)
     file_patterns = ['%06d-graph.png', '%06d-render.png', '%06d-log.json']
-    test_id = test_count(os.path.join(directory, file_patterns[0]))
+    test_id = max([test_count(os.path.join(directory, file_pattern)) for file_pattern in file_patterns])
 
-    save_graph(history, os.path.join(directory, file_patterns[0] % test_id))
-    save_render(history, os.path.join(directory, file_patterns[1] % test_id), renderer, rng)
-    save_log(history, os.path.join(directory, file_patterns[2] % test_id))
+    if 'g' in mode:
+        save_graph(history, os.path.join(directory, file_patterns[0] % test_id))
+    if 'l' in mode:
+        save_log(history, os.path.join(directory, file_patterns[2] % test_id))
+    if 'r' in mode:
+        save_render(history, os.path.join(directory, file_patterns[1] % test_id), renderer, rng, rgbdm_img)

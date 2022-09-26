@@ -29,6 +29,12 @@ class Renderer:
         disp = disp.reshape(self.img_shape + (-1,))
         return rgb, disp
 
+    def render_ray(self, ray: utils.Rays, rng):
+        rng, key_0, key_1 = jax.random.split(rng, 3)
+        rgb, disp, acc = self.render_fun(key_0, key_1, ray)[-1]
+        depth = acc / disp
+        return rgb, depth
+
     def render_rays(self, rays: utils.Rays, rng):
         results = []
         for i in tqdm(range(0, rays[0].shape[0], flags.FLAGS.chunk), leave=False, desc="Rendering", unit="chunk"):

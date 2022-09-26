@@ -8,9 +8,10 @@ from flax.training import checkpoints
 import jax
 from jax import numpy as jnp
 import jaxlie
-from PIL import Image
 
+from idnerf.dataset import load_dataset, get_frame
 from idnerf.log import save_history, compute_errors
+from idnerf.pixel_sampling import sample_pixels, generate_ray
 from idnerf.renderer import Renderer
 from jaxnerf.nerf import models, utils
 from tqdm import tqdm
@@ -34,7 +35,9 @@ def init():
     flags.DEFINE_float("huber_delta", 1.0, "", 0., 1e6)
     flags.DEFINE_integer("pixel_count", 128, "", 1, 16384)
     flags.DEFINE_integer("decay_steps", 100, "", 1, 16384)
+    flags.DEFINE_integer("frame_idx", 0, "", 0, 16384)
     flags.DEFINE_bool("distributed_render", False, "")
+    flags.DEFINE_bool("per_sample_gradient", False, "")
 
     if FLAGS.config is not None:
         utils.update_flags(FLAGS)
@@ -47,32 +50,6 @@ def init():
 
     rng = jax.random.PRNGKey(20220905)
     return rng
-
-
-def load_img(name):
-    img_path = path.join(FLAGS.train_dir, FLAGS.subset, "test_preds", name)
-    img = Image.open(img_path)
-    return jnp.asarray(img, jnp.float32) / 255.
-
-
-def load_rgbd_img(idx):
-    name = f'{idx:03}.png'
-    rgb_img = load_img(name)
-    disp_img = load_img("disp_" + name)
-    rgbd_img = jnp.concatenate([rgb_img, disp_img[..., None]], axis=-1)
-    return rgbd_img
-
-
-def load_dataset():
-    import json
-    data_path = path.join(FLAGS.data_dir, FLAGS.subset, "transforms_test.json")
-    with utils.open_file(data_path, "r") as fp:
-        dataset = json.load(fp)
-    camera_angle_x = float(dataset["camera_angle_x"])
-    dataset['img_shape'] = load_img('000.png').shape
-    dataset['focal'] = .5 * dataset['img_shape'][1] / jnp.tan(.5 * camera_angle_x)
-    logging.info("Loading transformations finished")
-    return dataset
 
 
 def load_model(rng, dataset):
@@ -103,7 +80,6 @@ def load_model(rng, dataset):
             axis_name="batch")
     render_fn = functools.partial(render_fn, variables)
     render_fn = jax.jit(render_fn)
-    logging.info("Loading model finished")
     return render_fn
 
 
@@ -122,25 +98,12 @@ def twist_transformation(T_matrix, rng):
     return T_true, T_init
 
 
-def compute_loss(params,
-                 T_init,
-                 pixels,
-                 renderer: Renderer,
-                 rng):
-    T = jaxlie.manifold.rplus(T_init, params['epsilon']).as_matrix()
-    rgb, depth = renderer.render(T, rng)
-    mask = depth > 0.001
-    loss_rgb = (optax.huber_loss(rgb, pixels[:, :3], FLAGS.huber_delta) * mask[:, None]).mean()
-    # loss_disp = (optax.huber_loss(disp, pixels[:, -1], FLAGS.huber_delta) * mask[:, None]).mean()
-    return loss_rgb  # + loss_disp
-
-
-def fit(T_init, rgbd_img, renderer: Renderer, rng, T_true):
+def fit2(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
     params = {'epsilon': jaxlie.manifold.zero_tangents(T_init)}
     scheduler = optax.exponential_decay(FLAGS.lr_init, FLAGS.decay_steps, FLAGS.decay_rate)
     optimizer = optax.adam(scheduler)
     opt_state = optimizer.init(params)
-    pixels, pixel_coords = renderer.resample_pixels(rgbd_img, rng)
+    rgbd_pixels, pixel_coords = sample_pixels(rgbdm_img, rng)
 
     history = {'loss': [],
                't error': [],
@@ -151,12 +114,88 @@ def fit(T_init, rgbd_img, renderer: Renderer, rng, T_true):
                'T_true': T_true,
                'pixel_coords': pixel_coords.tolist()}
 
+    def compute_loss2(params,
+                      rgbd_pixel,
+                      pixel_coord,
+                      rng):
+        T = jaxlie.manifold.rplus(T_init, params['epsilon']).as_matrix()
+        ray = generate_ray(pixel_coord, renderer.img_shape, renderer.focal, T)
+        rgb, depth = renderer.render_ray(ray, rng)
+        mask = depth > 0.001
+        loss_rgb = (optax.huber_loss(rgb, rgbd_pixel[:3], FLAGS.huber_delta) * mask).mean()
+        # loss_disp = optax.huber_loss(disp, rgbd_pixel[-1], FLAGS.huber_delta) * mask[:, None]
+        return loss_rgb  # + loss_disp
+
+    loss_per_sample = jax.jit(jax.vmap(jax.value_and_grad(compute_loss2), in_axes=(None, 0, 0, 0)))
+
+    @jax.jit
+    def step(params, opt_state, rng):
+        keys = jax.random.split(rng, rgbd_pixels.shape[0])
+        loss = []
+        grads = []
+        for i in range(0, rgbd_pixels.shape[0], flags.FLAGS.chunk):
+            chunk_loss, chunk_grads = loss_per_sample(params,
+                                                      rgbd_pixels[i:i+flags.FLAGS.chunk],
+                                                      pixel_coords[i:i+flags.FLAGS.chunk],
+                                                      keys[i:i+flags.FLAGS.chunk])
+            loss.append(chunk_loss)
+            grads.append(chunk_grads['epsilon'])
+        grads = jnp.concatenate(grads)
+        grads = grads.mean(axis=0)
+        loss = jnp.concatenate(loss)
+        loss = loss.mean()
+        updates, opt_state = optimizer.update({'epsilon': grads}, opt_state, params)
+        params = optax.apply_updates(params, updates)
+        return params, opt_state, loss, grads
+
+    print(f'|{"step":^5s}|{"loss":^7s}|{"grads":^49s}|{"t error":^7s}|{"R error":^7s}|')
+    for i in tqdm(range(FLAGS.max_steps)):
+        rng, key = jax.random.split(rng, 2)
+        params, opt_state, loss, grads = step(params, opt_state, key)
+
+        history['loss'].append(loss.tolist())
+        history['grad'].append(grads.tolist())
+        history['epsilon'].append(params['epsilon'].tolist())
+        t_error, R_error = compute_errors(T_true, jaxlie.manifold.rplus(T_init, params['epsilon']))
+        history['t error'].append(t_error)
+        history['R error'].append(R_error)
+        if i % FLAGS.print_every == 0:
+            tqdm.write(f'|{i:5d}|{loss:7.4f}|{grads}|{t_error:7.4f}|{R_error:7.4f}|')
+
+    history['T_final'] = jaxlie.manifold.rplus(T_init, params['epsilon'])
+    return history
+
+
+def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
+    params = {'epsilon': jaxlie.manifold.zero_tangents(T_init)}
+    scheduler = optax.exponential_decay(FLAGS.lr_init, FLAGS.decay_steps, FLAGS.decay_rate)
+    optimizer = optax.adam(scheduler)
+    opt_state = optimizer.init(params)
+    rgbd_pixels, pixel_coords = renderer.resample_pixels(rgbdm_img, rng)
+
+    history = {'loss': [],
+               't error': [],
+               'R error': [],
+               'grad': [],
+               'epsilon': [],
+               'T_init': T_init,
+               'T_true': T_true,
+               'pixel_coords': pixel_coords.tolist()}
+
+    def compute_loss(params,
+                     rgbd_pixels,
+                     rng):
+        T = jaxlie.manifold.rplus(T_init, params['epsilon']).as_matrix()
+        rgb, depth = renderer.render(T, rng)
+        mask = depth > 0.001
+        loss_rgb = (optax.huber_loss(rgb, rgbd_pixels[:, :3], FLAGS.huber_delta) * mask[:, None]).mean()
+        # loss_disp = (optax.huber_loss(disp, rgbd_pixels[:, -1], FLAGS.huber_delta) * mask[:, None]).mean()
+        return loss_rgb  # + loss_disp
+
     @jax.jit
     def step(params, opt_state):
         loss, grads = jax.value_and_grad(compute_loss)(params,
-                                                       T_init,
-                                                       pixels,
-                                                       renderer,
+                                                       rgbd_pixels,
                                                        rng)
         updates, opt_state = optimizer.update(grads, opt_state, params)
         params = optax.apply_updates(params, updates)
@@ -183,16 +222,18 @@ def main(_):
     rng = init()
     rng, key_0, key_1 = jax.random.split(rng, 3)
     dataset = load_dataset()
+    logging.info("Loading dataset finished")
     render_fn = load_model(key_0, dataset)
+    renderer = Renderer(render_fn, dataset['img_shape'], dataset['focal'])
+    logging.info("Loading model finished")
 
-    rgbd_img = load_rgbd_img(0)
-    renderer = Renderer(render_fn, rgbd_img.shape, dataset['focal'])
-    T_matrix = jnp.array(dataset["frames"][0]["transform_matrix"], jnp.float32)
+    rgbdm_img, T_matrix = get_frame(dataset, flags.FLAGS.frame_idx)
     T_true, T_init = twist_transformation(T_matrix, key_1)
-
-    history = fit(T_init, rgbd_img, renderer, rng, T_true)
-
-    save_history(history, renderer, rng)
+    if flags.FLAGS.per_sample_gradient:
+        history = fit2(T_init, rgbdm_img, renderer, rng, T_true)
+    else:
+        history = fit(T_init, rgbdm_img, renderer, rng, T_true)
+    save_history(history, renderer, rng, rgbdm_img)
 
 
 if __name__ == "__main__":
