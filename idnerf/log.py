@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 from copy import copy
@@ -5,6 +6,7 @@ from copy import copy
 import jax
 import jax.numpy as jnp
 import jaxlie
+import yaml
 from absl import flags
 from matplotlib import pyplot as plt
 
@@ -68,26 +70,14 @@ def compute_errors(T_true: jaxlie.SE3, T_pred: jaxlie.SE3):
 
 def save_log(history, file_name):
     history = copy(history)
-    params = ['dataset',
-              'subset',
-              'frame_idx',
-              'pixel_sampling',
-              'perturbation_R',
-              'perturbation_t',
-              'pixel_count',
-              'lr_init',
-              'num_coarse_samples',
-              'num_fine_samples',
-              'use_pixel_centers',
-              'max_steps',
-              'decay_steps',
-              'decay_rate',
-              'huber_delta',
-              'chunk']
-    _flags = {}
-    for param in params:
-        _flags[param] = flags.FLAGS.__getattribute__(param)
-    history['flags'] = _flags
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str)
+    args = parser.parse_args()
+
+    with open(os.path.join('jaxnerf', args.config + '.yaml'), 'r') as config_file:
+        configs = yaml.load(config_file, Loader=yaml.Loader)
+
+    history['configs'] = configs
 
     init_translation_error, init_rotation_error = compute_errors(history['T_true'], history['T_init'])
     final_translation_error, final_rotation_error = compute_errors(history['T_true'], history['T_final'])

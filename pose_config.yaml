@@ -1,6 +1,6 @@
 dataset: blender
-subset: lego
-frame_idx: 0
+subset: chair
+frame_idx: 29
 data_dir: datasets/nerf_synthetic/
 train_dir: models/blender/
 result_dir: results/
@@ -10,12 +10,12 @@ num_fine_samples: 128
 white_bkgd: true
 use_pixel_centers: true
 
-pixel_sampling: random_no_white
+pixel_sampling: random
 distributed_render: true
 per_sample_gradient: false
-use_original_img: false
-perturbation_R: 0.01
-perturbation_t: 0.03
+use_original_img: true
+perturbation_R: 0.2
+perturbation_t: 0.4
 pixel_count: 2048
 max_steps: 300
 lr_init: 0.02

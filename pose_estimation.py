@@ -27,7 +27,7 @@ def init():
     jnp.set_printoptions(precision=4)
 
     flags.DEFINE_string("result_dir", "results/", "")
-    flags.DEFINE_enum("pixel_sampling", "total", ["total", "random", "patch", "fast", "random_no_white"], "")
+    flags.DEFINE_enum("pixel_sampling", "total", ["total", "random", "patch", "fast", "fast_random"], "")
     flags.DEFINE_enum("subset", "lego", ["chair", "drums", "ficus", "hotdog", "lego", "materials", "mic", "ship"], "")
     flags.DEFINE_float("perturbation_R", 1.0, "", 0., 1e8)
     flags.DEFINE_float("perturbation_t", 1.0, "", 0., 1e8)
@@ -174,7 +174,6 @@ def get_loss_fn():
         return lambda y, x: (y-x)**2
     else:
         raise NotImplementedError()
-
 
 def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
     params = {'epsilon': jaxlie.manifold.zero_tangents(T_init)}

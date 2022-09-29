@@ -1,3 +1,4 @@
+import glob
 import os
 
 from PIL import Image
@@ -15,7 +16,9 @@ def load_rgbdm_img(dataset, idx):
         path = os.path.join(flags.FLAGS.data_dir, flags.FLAGS.subset)
         img_name = dataset['frames'][idx]['file_path']
         rgb = load_img(os.path.join(path, img_name+'.png'))[:, :, :3]
-        depth = load_img(os.path.join(path, img_name+'_depth_0001.png'))[:, :, 0]
+        depth_path = glob.glob(os.path.join(path, img_name+'_depth_*.png'))
+        assert len(depth_path) == 1
+        depth = load_img(depth_path[0])[:, :, 0]
         mask = depth > 1e-4
     else:
         path = os.path.join(flags.FLAGS.train_dir, flags.FLAGS.subset, 'test_preds')
