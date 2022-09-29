@@ -30,6 +30,7 @@ def init():
     flags.DEFINE_string("result_dir", "results/", "")
     flags.DEFINE_enum("pixel_sampling", "total", ["total", "random", "patch", "fast", "fast_random"], "")
     flags.DEFINE_enum("subset", "lego", ["chair", "drums", "ficus", "hotdog", "lego", "materials", "mic", "ship"], "")
+    flags.DEFINE_enum("optimizer", "adam", ["adam", "sgd"], "")
     flags.DEFINE_float("perturbation_R", 1.0, "", 0., 1e8)
     flags.DEFINE_float("perturbation_t", 1.0, "", 0., 1e8)
     flags.DEFINE_float("decay_rate", 0.6, "", 0., 1.)
@@ -178,10 +179,20 @@ def get_loss_fn():
         raise NotImplementedError()
 
 
+def get_optimizer(scheduler):
+    optimizer = flags.FLAGS.optimizer
+    if optimizer == "sgd":
+        return optax.sgd(scheduler, 0.4, False)
+    elif optimizer == "adam":
+        return optax.adam(scheduler)
+    else:
+        raise NotImplementedError()
+
+
 def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
     params = {'epsilon': jaxlie.manifold.zero_tangents(T_init)}
     scheduler = optax.exponential_decay(FLAGS.lr_init, FLAGS.decay_steps, FLAGS.decay_rate)
-    optimizer = optax.adam(scheduler)
+    optimizer = get_optimizer(scheduler)
     opt_state = optimizer.init(params)
     rgbd_pixels, pixel_coords = renderer.resample_pixels(rgbdm_img, rng)
 

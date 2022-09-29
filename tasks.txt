@@ -1,13 +1,13 @@
 RGBD image sequence relocalization with Inverse Neural Radiance fields
 
 ==== TBD ====
-Multiple Image ~10
 Asserts? Sanity checks
 Loss functions
 random-feature-patch
 batching
 
 ==== IN PROGRESS ====
+Multiple Image ~10
 synthetic -> llff
 per pixel gradient per dim histogram
 SGD test
