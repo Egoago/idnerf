@@ -33,11 +33,13 @@ def init():
     flags.DEFINE_float("perturbation_t", 1.0, "", 0., 1e8)
     flags.DEFINE_float("decay_rate", 0.6, "", 0., 1.)
     flags.DEFINE_float("huber_delta", 1.0, "", 0., 1e6)
+    flags.DEFINE_float("clip_grad", 0., "", 0., 10.)
     flags.DEFINE_integer("pixel_count", 128, "", 1, 16384)
     flags.DEFINE_integer("decay_steps", 100, "", 1, 16384)
     flags.DEFINE_integer("frame_idx", 0, "", 0, 16384)
     flags.DEFINE_bool("distributed_render", False, "")
     flags.DEFINE_bool("per_sample_gradient", False, "")
+    flags.DEFINE_bool("use_original_img", True, "")
 
     if FLAGS.config is not None:
         utils.update_flags(FLAGS)
@@ -165,6 +167,14 @@ def fit2(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
     history['T_final'] = jaxlie.manifold.rplus(T_init, params['epsilon'])
     return history
 
+def get_loss_fn():
+    if flags.FLAGS.loss == "huber":
+        return lambda y, x: optax.huber_loss(y, x, flags.FLAGS.huber_delta)
+    elif flags.FLAGS.loss == "mse":
+        return lambda y, x: (y-x)**2
+    else:
+        raise NotImplementedError()
+
 
 def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
     params = {'epsilon': jaxlie.manifold.zero_tangents(T_init)}
@@ -187,23 +197,26 @@ def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
                      rng):
         T = jaxlie.manifold.rplus(T_init, params['epsilon']).as_matrix()
         rgb, depth = renderer.render(T, rng)
-        mask = depth > 0.001
+        mask = (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
         loss_rgb = (optax.huber_loss(rgb, rgbd_pixels[:, :3], FLAGS.huber_delta) * mask[:, None]).mean()
-        # loss_disp = (optax.huber_loss(disp, rgbd_pixels[:, -1], FLAGS.huber_delta) * mask[:, None]).mean()
-        return loss_rgb  # + loss_disp
+        #loss_disp = (optax.huber_loss(depth, 1./rgbd_pixels[:, -1]*2., FLAGS.huber_delta) * mask[:, None]).mean()
+        return loss_rgb# + loss_disp
 
     @jax.jit
-    def step(params, opt_state):
+    def step(params, opt_state, rng):
         loss, grads = jax.value_and_grad(compute_loss)(params,
                                                        rgbd_pixels,
                                                        rng)
+        if flags.FLAGS.clip_grad != 0:
+            grads['epsilon'] = jnp.clip(grads['epsilon'], -flags.FLAGS.clip_grad, flags.FLAGS.clip_grad)
         updates, opt_state = optimizer.update(grads, opt_state, params)
         params = optax.apply_updates(params, updates)
         return params, opt_state, loss, grads
 
     print(f'|{"step":^5s}|{"loss":^7s}|{"grads":^49s}|{"t error":^7s}|{"R error":^7s}|')
     for i in tqdm(range(FLAGS.max_steps)):
-        params, opt_state, loss, grads = step(params, opt_state)
+        rng, key = jax.random.split(rng, 2)
+        params, opt_state, loss, grads = step(params, opt_state, key)
 
         history['loss'].append(loss.tolist())
         history['grad'].append(grads["epsilon"].tolist())
@@ -233,7 +246,7 @@ def main(_):
         history = fit2(T_init, rgbdm_img, renderer, rng, T_true)
     else:
         history = fit(T_init, rgbdm_img, renderer, rng, T_true)
-    save_history(history, renderer, rng, rgbdm_img)
+    save_history(history, renderer, rng, rgbdm_img, "gl")
 
 
 if __name__ == "__main__":

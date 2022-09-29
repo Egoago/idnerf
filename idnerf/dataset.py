@@ -11,11 +11,19 @@ def load_img(img_path):
 
 
 def load_rgbdm_img(dataset, idx):
-    path = os.path.join(flags.FLAGS.data_dir, flags.FLAGS.subset)
-    img_name = dataset['frames'][idx]['file_path']
-    rgb = load_img(os.path.join(path, img_name+'.png'))[:, :, :3]
-    depth = load_img(os.path.join(path, img_name+'_depth_0001.png'))[:, :, 0]
-    mask = depth > 1e-4
+    if flags.FLAGS.use_original_img:
+        path = os.path.join(flags.FLAGS.data_dir, flags.FLAGS.subset)
+        img_name = dataset['frames'][idx]['file_path']
+        rgb = load_img(os.path.join(path, img_name+'.png'))[:, :, :3]
+        depth = load_img(os.path.join(path, img_name+'_depth_0001.png'))[:, :, 0]
+        mask = depth > 1e-4
+    else:
+        path = os.path.join(flags.FLAGS.train_dir, flags.FLAGS.subset, 'test_preds')
+        img_name = f'{idx:03d}.png'
+        rgb = load_img(os.path.join(path, img_name))
+        disp = load_img(os.path.join(path, 'disp_' + img_name))
+        mask = disp < (1. - 1e-4)
+        depth = 1/disp
     rgbdm_img = jnp.concatenate([rgb, depth[..., None], mask[..., None]], axis=-1)
     return rgbdm_img
 

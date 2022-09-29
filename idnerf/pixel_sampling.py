@@ -28,10 +28,10 @@ def sample_pixels(rgbdm_img, rng, method=None):
             jax.random.choice(key2, jnp.arange(rgbdm_img.shape[0], dtype=jnp.float32), (pixel_count,))
         ])
     elif method == 'random_no_white':
-        mask = rgbdm_img[:, :, -1]
+        mask = (rgbdm_img[:, :, -1]).astype(dtype=bool)
         indices = jnp.indices(mask.shape)
         indices_yx = jnp.column_stack([indices[0].flatten(), indices[1].flatten()])[mask.flatten()]
-        pixel_coords = jax.random.choice(rng, indices_yx, (pixel_count,))
+        pixel_coords = jax.random.choice(rng, indices_yx, (pixel_count,), replace=False)
     elif method == 'fast':
         import numpy as np
         import cv2
@@ -39,13 +39,14 @@ def sample_pixels(rgbdm_img, rng, method=None):
         gray = np.uint8(rgbdm_img[:, :, :3] * 255)
         gray = cv2.cvtColor(gray, cv2.COLOR_RGB2GRAY)
         key_points = detector.detect(gray, None)
-        pixel_coords = np.array([key_point.pt for key_point in key_points], np.int32)
+        pixel_coords = np.array([key_point.pt for key_point in key_points], np.int32)[:, [1, 0]]
         weights = np.array([key_point.response for key_point in key_points], np.int32)
-        inv_mask = 1 - jnp.uint8(rgbdm_img[:, :, -1])
-        weights[inv_mask] = 0
+        mask = rgbdm_img[pixel_coords[:, 0], pixel_coords[:, 1], -1].astype(bool)
+        pixel_coords = pixel_coords[mask]
+        weights = weights[mask]
         probs = weights / weights.sum()
         if pixel_coords.shape[0] > pixel_count:
-            pixel_coords = jax.random.choice(rng, pixel_coords, (pixel_count,), p=probs)
+            pixel_coords = jax.random.choice(rng, pixel_coords, (pixel_count,), replace=False, p=probs)
     else:
         raise NotImplementedError(f"Sampling method not implemented: {method}")
     return rgbdm_img[pixel_coords[:, 0], pixel_coords[:, 1], :4], pixel_coords

@@ -1,13 +1,14 @@
 RGBD image sequence relocalization with Inverse Neural Radiance fields
 
 ==== TBD ====
+Multiple Image ~10
 Asserts? Sanity checks
 
 ==== IN PROGRESS ====
+synthetic -> llff
 per pixel gradient per dim histogram
 SGD test
 One image convergence region
-synthetic -> llff
 
 ==== DONE ====
 Huber loss

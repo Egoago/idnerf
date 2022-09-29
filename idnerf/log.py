@@ -1,5 +1,6 @@
 import json
 import os
+from copy import copy
 
 import jax
 import jax.numpy as jnp
@@ -7,7 +8,6 @@ import jaxlie
 from absl import flags
 from matplotlib import pyplot as plt
 
-from idnerf.dataset import get_frame
 from idnerf.renderer import Renderer
 
 
@@ -67,6 +67,7 @@ def compute_errors(T_true: jaxlie.SE3, T_pred: jaxlie.SE3):
 
 
 def save_log(history, file_name):
+    history = copy(history)
     params = ['dataset',
               'subset',
               'frame_idx',
@@ -85,7 +86,7 @@ def save_log(history, file_name):
               'chunk']
     _flags = {}
     for param in params:
-        _flags[param] = flags.FLAGS[param].value
+        _flags[param] = flags.FLAGS.__getattribute__(param)
     history['flags'] = _flags
 
     init_translation_error, init_rotation_error = compute_errors(history['T_true'], history['T_init'])

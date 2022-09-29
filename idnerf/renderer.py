@@ -24,10 +24,10 @@ class Renderer:
     def render_img(self, T, rng):
         pixel_coords = pixel_sampling.generate_pixel_coords(self.img_shape)
         rays = pixel_sampling.generate_rays(pixel_coords, self.img_shape, self.focal, T)
-        rgb, disp = self.render_rays(rays, rng)
+        rgb, depth = self.render_rays(rays, rng)
         rgb = rgb.reshape(self.img_shape + (3,))
-        disp = disp.reshape(self.img_shape + (-1,))
-        return rgb, disp
+        depth = depth.reshape(self.img_shape + (-1,))
+        return rgb, depth
 
     def render_ray(self, ray: utils.Rays, rng):
         rng, key_0, key_1 = jax.random.split(rng, 3)
