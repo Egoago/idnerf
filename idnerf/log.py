@@ -28,15 +28,26 @@ def save_graph(history, file_path):
     fig, ax1 = plt.subplots()
 
     ax2 = ax1.twinx()
-    ax1.plot(history['loss'], 'b-')
-    ax2.plot(history['t error'], 'r-', label='t error')
-    ax2.plot(history['R error'], 'r--', label='R error')
+    ax3 = ax1.twinx()
+    fig.subplots_adjust(right=0.75)
+    ax3.spines.right.set_position(("axes", 1.2))
 
-    ax1.set_xlabel('steps')
-    ax1.set_ylabel('loss', color='b')
-    ax2.set_ylabel('error', color='r')
-    plt.legend()
-    plt.grid()
+    ax1.plot(history['loss'], 'b-')
+    ax2.plot(history['t_error'], 'r-', label='t error')
+    ax2.plot(history['R_error'], 'r--', label='R error')
+    ax3.plot(history['sample_count'], 'g-', alpha=0.6)
+
+    ax1.set_xlabel('Steps')
+    ax1.set_ylabel('Loss', color='b')
+    ax2.set_ylabel('Error', color='r')
+    ax3.set_ylabel('Sample count', color='g')
+
+    ax1.yaxis.label.set_color('b')
+    ax2.yaxis.label.set_color('r')
+    ax3.yaxis.label.set_color('g')
+
+    ax2.legend()
+    ax2.grid()
 
     plt.savefig(file_path)
 
@@ -46,7 +57,7 @@ def save_render(history, file_path, renderer, rng, rgbdm_img):
     img_true, disp_true = rgbdm_img[:, :, :3], rgbdm_img[:, :, 3]
     img_init, disp_init = renderer.render_img(history['T_init'].as_matrix(), rng_keys[1])
     img_final, disp_final = renderer.render_img(history['T_final'].as_matrix(), rng_keys[2])
-    fig, axs = plt.subplots(2, 3, figsize=(24, 16), sharex=True, sharey=True)
+    fig, axs = plt.subplots(2, 3, figsize=(12, 8), sharex=True, sharey=True)
     fig.tight_layout()
     axs[0, 0].imshow(img_true)
     axs[0, 1].imshow(img_init)

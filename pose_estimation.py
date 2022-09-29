@@ -8,6 +8,7 @@ from flax.training import checkpoints
 import jax
 from jax import numpy as jnp
 import jaxlie
+from jax.experimental import host_callback as hcb
 
 from idnerf.dataset import load_dataset, get_frame
 from idnerf.log import save_history, compute_errors
@@ -167,6 +168,7 @@ def fit2(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
     history['T_final'] = jaxlie.manifold.rplus(T_init, params['epsilon'])
     return history
 
+
 def get_loss_fn():
     if flags.FLAGS.loss == "huber":
         return lambda y, x: optax.huber_loss(y, x, flags.FLAGS.huber_delta)
@@ -174,6 +176,7 @@ def get_loss_fn():
         return lambda y, x: (y-x)**2
     else:
         raise NotImplementedError()
+
 
 def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
     params = {'epsilon': jaxlie.manifold.zero_tangents(T_init)}
@@ -183,10 +186,11 @@ def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
     rgbd_pixels, pixel_coords = renderer.resample_pixels(rgbdm_img, rng)
 
     history = {'loss': [],
-               't error': [],
-               'R error': [],
+               't_error': [],
+               'R_error': [],
                'grad': [],
                'epsilon': [],
+               'sample_count': [],
                'T_init': T_init,
                'T_true': T_true,
                'pixel_coords': pixel_coords.tolist()}
@@ -197,6 +201,8 @@ def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
         T = jaxlie.manifold.rplus(T_init, params['epsilon']).as_matrix()
         rgb, depth = renderer.render(T, rng)
         mask = (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
+        sample_count = jnp.count_nonzero(mask)
+        hcb.id_tap(lambda arg, transform: history['sample_count'].append(int(arg)), sample_count)
         loss_rgb = (optax.huber_loss(rgb, rgbd_pixels[:, :3], FLAGS.huber_delta) * mask[:, None]).mean()
         #loss_disp = (optax.huber_loss(depth, 1./rgbd_pixels[:, -1]*2., FLAGS.huber_delta) * mask[:, None]).mean()
         return loss_rgb# + loss_disp
@@ -212,7 +218,7 @@ def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
         params = optax.apply_updates(params, updates)
         return params, opt_state, loss, grads
 
-    print(f'|{"step":^5s}|{"loss":^7s}|{"grads":^49s}|{"t error":^7s}|{"R error":^7s}|')
+    print(f'|{"step":^5s}|{"loss":^7s}|{"t error":^7s}|{"R error":^7s}|{"Samples":^7s}|{"grads":^49s}|')
     for i in tqdm(range(FLAGS.max_steps)):
         rng, key = jax.random.split(rng, 2)
         params, opt_state, loss, grads = step(params, opt_state, key)
@@ -221,10 +227,10 @@ def fit(T_init, rgbdm_img, renderer: Renderer, rng, T_true):
         history['grad'].append(grads["epsilon"].tolist())
         history['epsilon'].append(params["epsilon"].tolist())
         t_error, R_error = compute_errors(T_true, jaxlie.manifold.rplus(T_init, params['epsilon']))
-        history['t error'].append(t_error)
-        history['R error'].append(R_error)
+        history['t_error'].append(t_error)
+        history['R_error'].append(R_error)
         if i % FLAGS.print_every == 0:
-            tqdm.write(f'|{i:5d}|{loss:7.4f}|{grads["epsilon"]}|{t_error:7.4f}|{R_error:7.4f}|')
+            tqdm.write(f'|{i:5d}|{loss:7.4f}|{t_error:7.4f}|{R_error:7.4f}|{history["sample_count"][-1]:7d}|{grads["epsilon"]}|')
 
     history['T_final'] = jaxlie.manifold.rplus(T_init, params['epsilon'])
     return history

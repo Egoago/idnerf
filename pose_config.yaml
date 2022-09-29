@@ -1,5 +1,5 @@
 dataset: blender
-subset: chair
+subset: lego
 frame_idx: 29
 data_dir: datasets/nerf_synthetic/
 train_dir: models/blender/
