@@ -1,6 +1,6 @@
 dataset: blender
-subset: lego
-frame_idx: 29
+subset: ship
+frame_idx: 0
 data_dir: datasets/nerf_synthetic/
 train_dir: models/blender/
 result_dir: results/
@@ -10,7 +10,7 @@ num_fine_samples: 128
 white_bkgd: true
 use_pixel_centers: true
 
-pixel_sampling: random
+pixel_sampling: fast
 distributed_render: true
 per_sample_gradient: false
 use_original_img: true

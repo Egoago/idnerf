@@ -22,6 +22,7 @@ def random(rgbdm_img, pixel_count, rng):
     pixel_coords = jax.random.choice(rng, indices_yx, (pixel_count,), replace=False)
     return pixel_coords
 
+
 def fast(rgbdm_img, pixel_count, rng):
     import numpy as np
     import cv2
