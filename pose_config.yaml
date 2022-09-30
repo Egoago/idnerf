@@ -1,6 +1,6 @@
 dataset: blender
 subset: lego
-frame_idx: 29
+frame_ids: [0, 1, 2, 3]
 data_dir: datasets/nerf_synthetic/
 train_dir: models/blender/
 result_dir: results/
@@ -14,12 +14,12 @@ pixel_sampling: random
 distributed_render: true
 per_sample_gradient: false
 use_original_img: true
-perturbation_R: 0.3
-perturbation_t: 0.5
+perturbation_R: 0.1
+perturbation_t: 0.4
 pixel_count: 2048
 max_steps: 300
-optimizer: sgd
-lr_init: 0.005
+optimizer: adam
+lr_init: 0.02
 decay_steps: 100
 decay_rate: 0.6
 huber_delta: 1.

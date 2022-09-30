@@ -1,6 +1,7 @@
 import glob
 import os
 
+import jaxlie
 from PIL import Image
 from absl import flags
 import jax.numpy as jnp
@@ -34,7 +35,24 @@ def load_rgbdm_img(dataset, idx):
 def get_frame(dataset, idx):
     rgbdm_img = load_rgbdm_img(dataset, idx)
     T_matrix = jnp.array(dataset["frames"][idx]["transform_matrix"], jnp.float32)
-    return rgbdm_img, T_matrix
+    T = jaxlie.SE3.from_matrix(T_matrix)
+    return rgbdm_img, T
+
+
+def load_frames(dataset):
+    rgbdm_imgs = []
+    Ts = []
+    T_rels = []
+    for frame_id in flags.FLAGS.frame_ids:
+        rgbdm_img, T = get_frame(dataset, frame_id)
+        rgbdm_imgs.append(rgbdm_img)
+        if len(Ts) > 0:
+            T_prev = Ts[-1]
+            T_rel = T_prev @ T.inverse()
+            T_rels.append(T_rel)
+        Ts.append(T)
+    T_true = Ts[-1]
+    return rgbdm_imgs, T_true, T_rels
 
 
 def load_dataset():
@@ -43,6 +61,7 @@ def load_dataset():
     with open(data_path, "r") as fp:
         dataset = json.load(fp)
     camera_angle_x = float(dataset["camera_angle_x"])
-    dataset['img_shape'] = load_rgbdm_img(dataset, 0).shape[:2]
-    dataset['focal'] = .5 * dataset['img_shape'][1] / jnp.tan(.5 * camera_angle_x)
-    return dataset
+    height, width = load_rgbdm_img(dataset, 0).shape[:2]
+    focal = .5 * dataset['img_shape'][1] / jnp.tan(.5 * camera_angle_x)
+    rgbdm_imgs, T_true, T_rels = load_frames(dataset)
+    return rgbdm_imgs, T_true, T_rels, width, height, focal

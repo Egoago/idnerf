@@ -10,7 +10,7 @@ import yaml
 from absl import flags
 from matplotlib import pyplot as plt
 
-from idnerf.renderer import Renderer
+from idnerf.rendering import Renderer
 
 
 def test_count(path_pattern):
