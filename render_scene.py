@@ -58,7 +58,7 @@ def init():
     warnings.filterwarnings("ignore")
     rng = random.PRNGKey(20220905)
 
-    if FLAGS.config is not None:
+    if FLAGS.cam_params is not None:
         utils.update_flags(FLAGS)
     if FLAGS.train_dir is None:
         raise ValueError("train_dir must be set. None set now.")

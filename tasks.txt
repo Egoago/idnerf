@@ -1,10 +1,12 @@
 RGBD image sequence relocalization with Inverse Neural Radiance fields
 
 ==== TBD ====
+double prec?
 Asserts? Sanity checks
 Loss functions
 random-feature-patch
 batching
+BFGS-least squares
 
 ==== IN PROGRESS ====
 Multiple Image ~10

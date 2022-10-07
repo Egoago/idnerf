@@ -4,7 +4,7 @@ conda install jax cuda-nvcc -c conda-forge -c nvidia
 
 pip install --upgrade pip
 pip install --upgrade "jax[cuda]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-pip install tqdm pyyaml Pillow opencv-python flax==0.5.3 tensorflow jaxlie
+pip install tqdm pyyaml Pillow opencv-python flax==0.5.3 tensorflow==2.7.3 jaxlie
 
 
 (jaxnerf-new) csehi@csehi-ThinkPad:~/Nokia$ python -m jaxnerf.render_scene --config=idnerf/config
