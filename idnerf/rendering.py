@@ -46,8 +46,7 @@ def __render_chunk_rays(render_fun, rays: utils.Rays, rng):
         start, stop = host_id * rays_per_host, (host_id + 1) * rays_per_host
         rays = utils.namedtuple_map(lambda r: utils.shard(r[start:stop]), rays)
         chunk_results = render_fun(key_0, key_1, rays)[-1]
-        rgb, disp, acc = [utils.unshard(x[0], padding) for x in chunk_results]
+        rgb, depth = [utils.unshard(x[0], padding) for x in chunk_results]
     else:
-        rgb, disp, acc = render_fun(key_0, key_1, rays)[-1]
-    depth = acc / disp
+        rgb, depth = render_fun(key_0, key_1, rays)[-1]
     return rgb, depth

@@ -2,10 +2,8 @@ RGBD image sequence relocalization with Inverse Neural Radiance fields
 
 ==== TBD ====
 gradient clip before mean
-pixel sampling per opt step
 numeric check
 random-feature-patch
-batching
 BFGS-least squares
 
 ==== IN PROGRESS ====
@@ -17,6 +15,8 @@ SGD test
 One image convergence region
 
 ==== DONE ====
+batching
+pixel sampling per opt step
 local tangent space - iterate in SE3
 Multiple Image ~10
 Huber loss

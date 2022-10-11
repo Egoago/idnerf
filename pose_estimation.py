@@ -32,6 +32,7 @@ def init():
     flags.DEFINE_bool("distributed_render", False, "")
     flags.DEFINE_bool("per_sample_gradient", False, "")
     flags.DEFINE_bool("use_original_img", True, "")
+    flags.DEFINE_bool("resample_rays", True, "")
     flags.DEFINE_list("frame_ids", [0], "")
 
     if FLAGS.config is not None:
@@ -62,7 +63,7 @@ def main(_):
         raise NotImplementedError()  # TODO implement
     idnerf.fit(data, render_fn, rng_keys[3])
 
-    idnerf.save(data, render_fn, rng_keys[4], "gd")
+    idnerf.save(data, render_fn, rng_keys[4], "gdr")
 
 
 if __name__ == "__main__":

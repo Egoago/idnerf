@@ -68,8 +68,7 @@ def total_pixel_coords_xy(width: int, height: int) -> jnp.ndarray:
 
 
 def compute_errors(T_true: jaxlie.SE3, T_pred: jaxlie.SE3):
-    t_gt, t_pred = T_true.translation(), T_pred.translation()
-    R_gt, R_pred = T_true.rotation(), T_pred.rotation()
-    translation_error = jnp.linalg.norm(t_gt - t_pred).tolist()
-    rotation_error = jnp.linalg.norm((R_gt @ R_pred.inverse()).log()).tolist()
+    T_diff = T_pred.inverse() @ T_true
+    translation_error = jnp.linalg.norm(T_diff.translation()).tolist()
+    rotation_error = jnp.linalg.norm(T_diff.rotation().log()).tolist()
     return translation_error, rotation_error

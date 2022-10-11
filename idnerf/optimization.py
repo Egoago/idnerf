@@ -2,7 +2,6 @@ import functools
 from copy import deepcopy
 
 import jax
-from jax.experimental import host_callback as hcb
 import jax.numpy as jnp
 import jaxlie
 import optax
@@ -28,13 +27,12 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
         T_pred = _params['T_pred']
         rays = math.transform_rays(rays_relative_to_base, T_pred)
         rgb, depth = rendering.render_rays(render_fn, rays, rng)
-        mask = (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
         #   TODO add depth
         #   TODO per_sample gradient for clipping
-        #   TODO add sample counting back
         mask = (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
         sample_count = jnp.count_nonzero(mask)
-        loss_rgb = (optax.huber_loss(rgb, rgbd_pixels[:, :3], flags.FLAGS.huber_delta) * mask[:, None]).mean()
+        loss_rgb = (optax.huber_loss(rgb, rgbd_pixels[:, :3], flags.FLAGS.huber_delta) * mask[:, None] +
+                    0.5*(1. - mask[:, None])).mean()
         return loss_rgb, sample_count
 
     (loss, sample_count), grads = jaxlie.manifold.value_and_grad(loss, has_aux=True)(params)
@@ -52,24 +50,29 @@ def fit(data: base.Data, render_fn, rng):
     history = base.History()
     sampler = sampling.Sampler(data)
 
-    print(f'|{"step":^5s}|{"loss":^7s}|{"t error":^7s}|{"R error":^7s}|{"grads":^49s}|')
+    print(f'|{"step":^5s}|{"loss":^7s}|{"t error":^7s}|{"R error":^7s}|{"Samples":^7s}|{"grads":^49s}|')
+    rays_relative_to_base, rgbd_pixels = sampler.sample(rng)
     for i in tqdm(range(flags.FLAGS.max_steps)):
         rng, subkey_1, subkey_2 = jax.random.split(rng, 3)
-        rays_relative_to_base, rgbd_pixels = sampler.sample(subkey_1)
         params, opt_state, loss, grads, sample_count = optimization_step(params, opt_state, subkey_2,
                                                                          render_fn, rays_relative_to_base, rgbd_pixels,
                                                                          optimizer)
 
         T_pred = params['T_pred']
         t_error, R_error = math.compute_errors(data.T_true, T_pred)
+        sample_count = sample_count.tolist()
 
         history.loss.append(loss.tolist())
         history.grads.append(grads["T_pred"].tolist())
         history.log_T_pred.append(params["T_pred"].log().tolist())
         history.t_error.append(t_error)
         history.R_error.append(R_error)
-        history.sample_count.append(sample_count.tolist())
+        history.sample_count.append(sample_count)
+
+        if flags.FLAGS.resample_rays:
+            rays_relative_to_base, rgbd_pixels = sampler.sample(rng)
+
         if i % flags.FLAGS.print_every == 0:
-            tqdm.write(f'|{i:5d}|{loss:7.4f}|{t_error:7.4f}|{R_error:7.4f}|{grads["T_pred"]}|')
+            tqdm.write(f'|{i:5d}|{loss:7.4f}|{t_error:7.4f}|{R_error:7.4f}|{sample_count:7d}|{grads["T_pred"]}|')
     data.T_final = params['T_pred']
     data.history = history
