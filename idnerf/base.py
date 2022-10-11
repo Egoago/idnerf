@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field, asdict, fields
+from dataclasses import dataclass, field, asdict
 from typing import Optional, List
 
 import jaxlie
@@ -8,15 +8,14 @@ import jax.numpy as jnp
 
 @dataclass
 class Frame:
-    T_rel: jaxlie.SE3
+    T_cam2base: jaxlie.SE3
     id: int
     rgbdm_img: Optional[jnp.ndarray] = None
-    pixel_coords_yx: Optional[jnp.ndarray] = None
 
     def to_dict(self):
         _dict = dict()
         _dict['id'] = self.id
-        _dict['T_rel'] = se3_to_dict(self.T_rel)
+        _dict['T_cam2last'] = se3_to_dict(self.T_cam2base)
         return _dict
 
 
@@ -30,7 +29,7 @@ class CameraParameters:
 @dataclass
 class History:
     loss: List[float] = field(default_factory=list)
-    epsilon: List[float] = field(default_factory=list)
+    log_T_pred: List[float] = field(default_factory=list)
     grads: List[list] = field(default_factory=list)
     t_error: List[list] = field(default_factory=list)
     R_error: List[list] = field(default_factory=list)

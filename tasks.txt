@@ -1,16 +1,19 @@
 RGBD image sequence relocalization with Inverse Neural Radiance fields
 
 ==== TBD ====
-double prec?
-Asserts? Sanity checks
-Loss functions
+local tangent space - iterate in SE3
+fix relative transformations
+gradient clip before mean
+pixel sampling per opt step
+numeric check
 random-feature-patch
 batching
 BFGS-least squares
 
 ==== IN PROGRESS ====
+Asserts? Sanity checks
 Multiple Image ~10
-synthetic -> llff
+synthetic -> new dataset
 per pixel gradient per dim histogram
 SGD test
 One image convergence region

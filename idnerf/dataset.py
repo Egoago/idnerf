@@ -39,22 +39,23 @@ def load_rgbdm_img(dataset, idx) -> jnp.ndarray:
 def get_frame(dataset, idx) -> Tuple[jnp.ndarray, jaxlie.SE3]:
     rgbdm_img = load_rgbdm_img(dataset, idx)
     T_matrix = jnp.array(dataset["frames"][idx]["transform_matrix"], jnp.float32)
-    T = jaxlie.SE3.from_matrix(T_matrix)
-    return rgbdm_img, T
+    T_cam2world = jaxlie.SE3.from_matrix(T_matrix)
+    # noinspection PyTypeChecker
+    return rgbdm_img, T_cam2world
 
 
 def load_frames(dataset) -> Tuple[List[base.Frame], jaxlie.SE3]:
     assert len(FLAGS.frame_ids) > 0
     rgbdm_imgs = []
-    Ts = []
+    T_cam2worlds = []
     for frame_id in FLAGS.frame_ids:
-        rgbdm_img, T = get_frame(dataset, frame_id)
+        rgbdm_img, T_cam2world = get_frame(dataset, frame_id)
         rgbdm_imgs.append(rgbdm_img)
-        Ts.append(T)
-    T_rels, T_true = math.calculate_T_rels(Ts)
-    frames = [base.Frame(id=id,
-                    rgbdm_img=rgbdm_img,
-                    T_rel=T_rel) for T_rel, rgbdm_img, id in zip(T_rels, rgbdm_imgs, FLAGS.frame_ids)]
+        T_cam2worlds.append(T_cam2world)
+    T_cam2lasts, T_true = math.relative_transformations(T_cam2worlds)
+    frames = [base.Frame(T_cam2base=T_cam2last,
+                         rgbdm_img=rgbdm_img,
+                         id=_id) for T_cam2last, rgbdm_img, _id in zip(T_cam2lasts, rgbdm_imgs, FLAGS.frame_ids)]
     return frames, T_true
 
 

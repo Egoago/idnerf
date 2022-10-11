@@ -1,9 +1,12 @@
+from typing import List, Tuple
+
 import jax
 import jax.numpy as jnp
 
-from absl import flags, logging
+from absl import flags
 
 from idnerf import base, math
+from jaxnerf.nerf import utils
 
 
 def __random(rgbdm_img, pixel_count, rng):
@@ -53,15 +56,36 @@ def sample_img(rgbdm_img, rng, method=None, pixel_count=None) -> jnp.ndarray:
     return pixel_coords_yx
 
 
-def sample_imgs(data: base.Data, rng) -> None:
-    img_count = len(data.frames)
-    pixel_count = flags.FLAGS.pixel_count
-    assert pixel_count % img_count == 0
-    pixels_per_img = pixel_count // img_count
+class Sampler:
+    def __init__(self, data: base.Data):
+        self.data = data
+        self.method = flags.FLAGS.pixel_sampling
+        self.pixels_per_img = flags.FLAGS.pixel_count // len(data.frames)
 
-    for frame in data.frames:
-        rng, subkey = jax.random.split(rng, 2)
-        pixel_coords_yx = sample_img(frame.rgbdm_img, subkey, pixel_count=pixels_per_img)
-        frame.pixel_coords_yx = pixel_coords_yx
+    @staticmethod
+    def __concatenate_rays(rays_list: List[utils.Rays]) -> utils.Rays:
+        return utils.Rays(directions=jnp.concatenate([rays.directions for rays in rays_list]),
+                          viewdirs=jnp.concatenate([rays.viewdirs for rays in rays_list]),
+                          origins=jnp.concatenate([rays.origins for rays in rays_list]))
 
-    logging.info("Sampling pixels finished")
+    def sample(self, rng) -> Tuple[utils.Rays, jnp.ndarray]:
+        """Samples rays from each frame, with relative transformation to the base frame.
+
+        Returns: rays_relative_to_base(utils.Rays): sampled rays relative to rays
+                 rgbd_pixels(jnp.ndarray): rgbd pixels corresponding to the sampled rays
+
+        """
+        rays_list = []
+        rgbd_pixels = []
+        for frame in self.data.frames:
+            rng, subkey = jax.random.split(rng, 2)
+            pixel_coords_yx = sample_img(frame.rgbdm_img, subkey, pixel_count=self.pixels_per_img)
+            rays_cam = math.coords_to_local_rays(pixel_coords_yx, self.data.cam_params)
+            rays_relative_to_base = math.transform_rays(rays_cam, frame.T_cam2base)
+            rays_list.append(rays_relative_to_base)
+            rgbd_pixels.append(frame.rgbdm_img[pixel_coords_yx[:, 0], pixel_coords_yx[:, 1], :4])
+        rays_relative_to_base = self.__concatenate_rays(rays_list)
+        rgbd_pixels = jnp.concatenate(rgbd_pixels)
+        return rays_relative_to_base, rgbd_pixels
+
+

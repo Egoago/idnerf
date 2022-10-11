@@ -7,50 +7,41 @@ from jax import numpy as jnp
 from absl.flags import FLAGS
 
 from idnerf import base
+from jaxnerf.nerf import utils
 
 
-def __coords2directions(pixel_coords_yx: jnp.ndarray, cam_params: base.CameraParameters) -> jnp.ndarray:
+def coords_to_local_rays(pixel_coords_yx: jnp.ndarray, cam_params: base.CameraParameters) -> utils.Rays:
     if jnp.ndim(pixel_coords_yx) != 2:
         pixel_coords_yx = pixel_coords_yx.reshape((1, 2))
     pixel_count = pixel_coords_yx.shape[0]
     directions = jnp.stack([(pixel_coords_yx[:, 1] - cam_params.width * 0.5) / cam_params.focal,
                             -(pixel_coords_yx[:, 0] - cam_params.height * 0.5) / cam_params.focal,
                             -jnp.ones(pixel_count)], axis=-1)
-    return directions
-
-
-def __directions2rays(directions: jnp.ndarray, T: jaxlie.SE3) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
-    R, t = T.rotation().as_matrix(), T.translation()
-    directions = directions @ R.T
-    origins = jnp.tile(t, (directions.shape[0], 1))
+    origins = jnp.zeros_like(directions)
     viewdirs = directions / jnp.linalg.norm(directions, axis=-1, keepdims=True)
-    return origins, directions, viewdirs
+    return utils.Rays(directions=directions, viewdirs=viewdirs, origins=origins)
 
 
-def coords2rays(pixel_coords_yx: jnp.ndarray, cam_params: base.CameraParameters, T: jaxlie.SE3):
-    directions = __coords2directions(pixel_coords_yx, cam_params)
-    return __directions2rays(directions, T)
+# noinspection PyUnresolvedReferences
+def transform_rays(rays: utils.Rays, T: jaxlie.SE3) -> utils.Rays:
+    R, t = T.rotation().as_matrix(), T.translation()
+    directions = rays.directions @ R.T
+    origins = rays.origins @ R.T + t[None, :]
+    viewdirs = rays.viewdirs @ R.T
+    return utils.Rays(directions=directions, viewdirs=viewdirs, origins=origins)
 
 
-def calculate_T_rels(Ts: List[jaxlie.SE3]) -> Tuple[List[jaxlie.SE3], jaxlie.SE3]:
-    assert len(Ts) > 0
-    T_rels = []
-    T_true = Ts[-1]
-    T_rels.append(jaxlie.SE3.identity())
+def relative_transformations(T_cam2worlds: List[jaxlie.SE3]) -> Tuple[List[jaxlie.SE3], jaxlie.SE3]:
+    assert len(T_cam2worlds) > 0
+    T_cam2lasts = []
+    T_true = T_cam2worlds[-1]
     T_true_inv = T_true.inverse()
-    for T in reversed(Ts[:-1]):
-        T_rel = T @ T_true_inv
-        assert jnp.allclose(T.apply(jnp.array([1, 2, 3])),
-                            T_rel.apply(T_true.apply(jnp.array([1, 2, 3]))))
-        T_rels.append(T_rel)
-    T_rels.reverse()
-    return T_rels, T_true
-
-
-def update_pose(T_base: jaxlie.SE3, T_rel: jaxlie.SE3, epsilon: jnp.ndarray) -> jaxlie.SE3:
-    T_base = jaxlie.manifold.rplus(T_base, epsilon)
-    T = T_rel @ T_base
-    return T
+    for T_cam2world in T_cam2worlds:
+        T_cam2last = T_true_inv @ T_cam2world
+        assert jnp.allclose(T_cam2world @ jnp.array([1, 2, 3]),
+                            T_true @ T_cam2last @ jnp.array([1, 2, 3]))
+        T_cam2lasts.append(T_cam2last)
+    return T_cam2lasts, T_true
 
 
 def twist_transformation(T_true: jaxlie.SE3, rng):
