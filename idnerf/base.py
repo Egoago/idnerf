@@ -33,6 +33,7 @@ class History:
     grads: List[list] = field(default_factory=list)
     t_error: List[list] = field(default_factory=list)
     R_error: List[list] = field(default_factory=list)
+    sample_count: List[list] = field(default_factory=list)
 
 
 @dataclass

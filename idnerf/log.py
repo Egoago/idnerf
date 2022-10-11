@@ -26,23 +26,23 @@ def save_graph(history: base.History, file_path):
     fig, ax1 = plt.subplots()
 
     ax2 = ax1.twinx()
-    # ax3 = ax1.twinx()  # TODO add sample_count
-    # fig.subplots_adjust(right=0.75)
-    # ax3.spines.right.set_position(("axes", 1.2))
+    ax3 = ax1.twinx()
+    fig.subplots_adjust(right=0.75)
+    ax3.spines.right.set_position(("axes", 1.2))
 
     ax1.plot(history.loss, 'b-')
     ax2.plot(history.t_error, 'r-', label='t error')
     ax2.plot(history.R_error, 'r--', label='R error')
-    # ax3.plot(history.sample_count'], 'g-', alpha=0.6)
+    ax3.plot(history.sample_count, 'g-', alpha=0.6)
 
     ax1.set_xlabel('Steps')
     ax1.set_ylabel('Loss', color='b')
     ax2.set_ylabel('Error', color='r')
-    # ax3.set_ylabel('Sample count', color='g')
+    ax3.set_ylabel('Sample count', color='g')
 
     ax1.yaxis.label.set_color('b')
     ax2.yaxis.label.set_color('r')
-    # ax3.yaxis.label.set_color('g')
+    ax3.yaxis.label.set_color('g')
 
     ax2.legend()
     ax2.grid()
