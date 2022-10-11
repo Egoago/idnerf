@@ -8,4 +8,4 @@ pip install tqdm pyyaml Pillow opencv-python flax==0.5.3 tensorflow==2.7.3 jaxli
 
 
 (jaxnerf-new) csehi@csehi-ThinkPad:~/Nokia$ python -m jaxnerf.render_scene --config=idnerf/config
-watch -n0.1 nvidia-smi
+watch -n0.5 nvidia-smi

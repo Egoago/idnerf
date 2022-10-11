@@ -1,8 +1,6 @@
 RGBD image sequence relocalization with Inverse Neural Radiance fields
 
 ==== TBD ====
-local tangent space - iterate in SE3
-fix relative transformations
 gradient clip before mean
 pixel sampling per opt step
 numeric check
@@ -11,14 +9,16 @@ batching
 BFGS-least squares
 
 ==== IN PROGRESS ====
+fix relative transformations
 Asserts? Sanity checks
-Multiple Image ~10
 synthetic -> new dataset
 per pixel gradient per dim histogram
 SGD test
 One image convergence region
 
 ==== DONE ====
+local tangent space - iterate in SE3
+Multiple Image ~10
 Huber loss
 white mask
 	reference image - pixel sampling

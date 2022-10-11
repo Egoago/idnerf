@@ -24,6 +24,7 @@ def render_rays(render_fun, rays: utils.Rays, rng) -> Tuple[jnp.ndarray, jnp.nda
     rgb_list, depth_list = [], []
     for i in tqdm(range(0, rays.directions.shape[0], flags.FLAGS.chunk), desc='Rendering', unit='chunk'):
         chunk_rays = utils.namedtuple_map(lambda r: r[i:i + flags.FLAGS.chunk], rays)
+        #rng, subkey = jax.random.split(rng, 2)
         rgb, depth = __render_chunk_rays(render_fun, chunk_rays, rng)
         rgb_list.append(rgb)
         depth_list.append(depth)

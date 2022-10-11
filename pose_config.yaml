@@ -8,7 +8,7 @@ print_every: 10
 num_coarse_samples: 64
 num_fine_samples: 128
 white_bkgd: true
-use_pixel_centers: true
+use_pixel_centers: false
 
 pixel_sampling: random
 distributed_render: true
@@ -25,3 +25,4 @@ decay_rate: 0.6
 huber_delta: 1.
 chunk: 2048
 clip_grad: 0.
+randomized: false
