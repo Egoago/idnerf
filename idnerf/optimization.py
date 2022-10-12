@@ -43,17 +43,16 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
     def loss(_params):
         T_pred = _params['T_pred']
         rays = math.transform_rays(rays_relative_to_base, T_pred)
-        rgb, depth = rendering.render_rays(render_fn, rays, rng)
+        rgb, depth = rendering.render_rays(render_fn, rays, rng, flags.FLAGS.coarse_opt)
         #   TODO add depth
-        #   TODO per_sample gradient for clipping
+        #   TODO per_sample gradient
         mask = (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
-        #mask = jnp.ones_like(mask)
-        sample_count = jnp.count_nonzero(mask)
+        _sample_count = jnp.count_nonzero(mask)
         loss_rgb = optax.huber_loss(rgb, rgbd_pixels[:, :3], flags.FLAGS.huber_delta) * mask[:, None]
         #host_callback.id_tap(lambda arg, transform: history['sample_count'].append(int(arg)), sample_count)
         if flags.FLAGS.clip_grad > 0:
             loss_rgb = clip_gradient(loss_rgb, flags.FLAGS.clip_grad)
-        return loss_rgb.sum() / mask.sum(), sample_count
+        return loss_rgb.sum() / mask.sum(), _sample_count
 
     (loss, sample_count), grads = jaxlie.manifold.value_and_grad(loss, has_aux=True)(params)
     updates, new_opt_state = optimizer.update(grads, opt_state, params)
@@ -74,7 +73,7 @@ def fit(data: base.Data, render_fn, rng):
 
     print(f'|{"step":^5s}|{"loss":^7s}|{"t error":^7s}|{"R error":^7s}|{"Samples":^7s}|{"grads":^49s}|')
     rays_relative_to_base, rgbd_pixels = sampler.sample(rng)
-    for i in tqdm(range(flags.FLAGS.max_steps)):
+    for i in tqdm(range(flags.FLAGS.max_steps), desc='Optimalization', unit='step'):
         rng, subkey_1, subkey_2 = jax.random.split(rng, 3)
         params, opt_state, loss, grads, sample_count = optimization_step(params, opt_state, subkey_2,
                                                                          render_fn, rays_relative_to_base, rgbd_pixels,
