@@ -22,7 +22,7 @@ def __test_count(path_pattern):
     return b
 
 
-def save_graph(history: base.History, file_path):
+def save_graph(history: base.History, file_path, title):
     fig, ax1 = plt.subplots()
 
     ax2 = ax1.twinx()
@@ -46,6 +46,7 @@ def save_graph(history: base.History, file_path):
 
     ax2.legend()
     ax2.grid()
+    fig.suptitle(title, fontsize=16)
 
     plt.savefig(file_path)
 
@@ -103,9 +104,12 @@ def save(data: base.Data, render_fn, rng, mode="grd"):
     file_patterns = ['%06d-graph.png', '%06d-render.png', '%06d-data.json']
     test_id = max([__test_count(os.path.join(directory, file_pattern)) for file_pattern in file_patterns])
     file_paths = [os.path.join(directory, pattern % test_id) for pattern in file_patterns]
+    title = flags.FLAGS.test_name
+    if title is None:
+        title = f"Test {test_id}"
 
     if 'g' in mode:
-        save_graph(data.history, file_paths[0])
+        save_graph(data.history, file_paths[0], title)
     if 'd' in mode:
         save_data(data, file_paths[2])
     if 'r' in mode:

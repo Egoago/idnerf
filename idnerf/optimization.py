@@ -3,6 +3,7 @@ from copy import deepcopy
 
 import jax
 import jax.numpy as jnp
+from jax.experimental import host_callback
 import jaxlie
 import optax
 from absl import flags
@@ -21,6 +22,22 @@ def get_optimizer(scheduler):
         raise NotImplementedError()
 
 
+@jax.custom_vjp
+def clip_gradient(x, limit):
+    return x
+
+
+def clip_gradient_fwd(x, limit):
+    return x, limit
+
+
+def clip_gradient_bwd(g, limit):
+    return jnp.clip(g, -limit, limit), None
+
+
+clip_gradient.defvjp(clip_gradient_fwd, clip_gradient_bwd)
+
+
 @functools.partial(jax.jit, static_argnums=(3, 6))
 def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, rgbd_pixels, optimizer):
     def loss(_params):
@@ -30,10 +47,13 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
         #   TODO add depth
         #   TODO per_sample gradient for clipping
         mask = (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
+        #mask = jnp.ones_like(mask)
         sample_count = jnp.count_nonzero(mask)
-        loss_rgb = (optax.huber_loss(rgb, rgbd_pixels[:, :3], flags.FLAGS.huber_delta) * mask[:, None] +
-                    0.5*(1. - mask[:, None])).mean()
-        return loss_rgb, sample_count
+        loss_rgb = optax.huber_loss(rgb, rgbd_pixels[:, :3], flags.FLAGS.huber_delta) * mask[:, None]
+        #host_callback.id_tap(lambda arg, transform: history['sample_count'].append(int(arg)), sample_count)
+        if flags.FLAGS.clip_grad > 0:
+            loss_rgb = clip_gradient(loss_rgb, flags.FLAGS.clip_grad)
+        return loss_rgb.sum() / mask.sum(), sample_count
 
     (loss, sample_count), grads = jaxlie.manifold.value_and_grad(loss, has_aux=True)(params)
     updates, new_opt_state = optimizer.update(grads, opt_state, params)
@@ -43,7 +63,9 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
 
 def fit(data: base.Data, render_fn, rng):
     params = {'T_pred': deepcopy(data.T_init)}
-    scheduler = optax.exponential_decay(flags.FLAGS.lr_init, flags.FLAGS.decay_steps, flags.FLAGS.decay_rate)
+    scheduler = optax.exponential_decay(flags.FLAGS.lr_init,
+                                        flags.FLAGS.decay_steps,
+                                        flags.FLAGS.decay_rate)
     optimizer = get_optimizer(scheduler)
     opt_state = optimizer.init(jaxlie.manifold.zero_tangents(params))
 

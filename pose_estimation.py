@@ -18,6 +18,7 @@ def init():
     jnp.set_printoptions(precision=4)
 
     flags.DEFINE_string("result_dir", "results/", "")
+    flags.DEFINE_string("test_name", None, "")
     flags.DEFINE_enum("pixel_sampling", "total", ["total", "random", "patch", "fast", "fast_random"], "")
     flags.DEFINE_enum("subset", "lego", ["chair", "drums", "ficus", "hotdog", "lego", "materials", "mic", "ship"], "")
     flags.DEFINE_enum("optimizer", "adam", ["adam", "sgd"], "")
@@ -44,7 +45,7 @@ def init():
     if FLAGS.result_dir is None:
         raise ValueError("data_dir must be set. None set now.")
 
-    rng = jax.random.PRNGKey(20220905)
+    rng = jax.random.PRNGKey(20221012)
     return rng
 
 

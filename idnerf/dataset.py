@@ -30,7 +30,7 @@ def load_rgbdm_img(dataset, idx) -> jnp.ndarray:
         img_name = f'{idx:03d}.png'
         rgb = load_img(os.path.join(path, img_name))
         disp = load_img(os.path.join(path, 'disp_' + img_name))
-        mask = disp < (1. - 1e-4)
+        mask = jnp.mean(rgb, axis=-1) < (1. - 1e-4)
         depth = 1 / disp
     rgbdm_img = jnp.concatenate([rgb, depth[..., None], mask[..., None]], axis=-1)
     return rgbdm_img

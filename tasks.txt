@@ -1,13 +1,31 @@
 RGBD image sequence relocalization with Inverse Neural Radiance fields
 
 ==== TBD ====
-gradient clip before mean
+Depth
+no lr schedule
+longer plots
+init error normalised
 numeric check
 random-feature-patch
 BFGS-least squares
 
+=== FINDINGS ===
+depth
+multi
+coarse-fine
+
+=== story ===
+Path planning -> drift -> relocalization
+mathematical problem formulation, Lie algebra
+key frames, dbow, feature matching, sparse-dense
+nerf, volumetric rendering math
+inerf , dnerf, instantnerf, block nerf
+inerf convergence radius: depth, multi, coarse
+math multi depth
+
+
+
 ==== IN PROGRESS ====
-fix relative transformations
 Asserts? Sanity checks
 synthetic -> new dataset
 per pixel gradient per dim histogram
@@ -15,7 +33,9 @@ SGD test
 One image convergence region
 
 ==== DONE ====
+fix relative transformations
 batching
+gradient clip before mean
 pixel sampling per opt step
 local tangent space - iterate in SE3
 Multiple Image ~10
