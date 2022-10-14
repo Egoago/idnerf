@@ -39,7 +39,7 @@ def relative_transformations(T_cam2worlds: List[jaxlie.SE3]) -> Tuple[List[jaxli
     for T_cam2world in T_cam2worlds:
         T_cam2last = T_true_inv @ T_cam2world
         assert jnp.allclose(T_cam2world @ jnp.array([1, 2, 3]),
-                            T_true @ T_cam2last @ jnp.array([1, 2, 3]))
+                            T_true @ T_cam2last @ jnp.array([1, 2, 3]), 1e-4)
         T_cam2lasts.append(T_cam2last)
     return T_cam2lasts, T_true
 

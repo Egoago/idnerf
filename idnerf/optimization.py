@@ -3,7 +3,6 @@ from copy import deepcopy
 
 import jax
 import jax.numpy as jnp
-from jax.experimental import host_callback
 import jaxlie
 import optax
 from absl import flags
@@ -48,11 +47,17 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
         #   TODO per_sample gradient
         mask = (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
         _sample_count = jnp.count_nonzero(mask)
-        loss_rgb = optax.huber_loss(rgb, rgbd_pixels[:, :3], flags.FLAGS.huber_delta) * mask[:, None]
-        #host_callback.id_tap(lambda arg, transform: history['sample_count'].append(int(arg)), sample_count)
-        if flags.FLAGS.clip_grad > 0:
-            loss_rgb = clip_gradient(loss_rgb, flags.FLAGS.clip_grad)
-        return loss_rgb.sum() / mask.sum(), _sample_count
+        pixel_loss = optax.huber_loss(rgb,
+                                      rgbd_pixels[:, :3],
+                                      flags.FLAGS.huber_delta).mean(axis=-1)
+        if flags.FLAGS.depth_param > 0.:
+            pixel_loss = pixel_loss + flags.FLAGS.depth_param * optax.huber_loss(depth,
+                                                                                 rgbd_pixels[:, 3],
+                                                                                 flags.FLAGS.huber_delta)
+        pixel_loss = pixel_loss * mask
+        if flags.FLAGS.clip_grad > 0.:
+            pixel_loss = clip_gradient(pixel_loss, flags.FLAGS.clip_grad)
+        return pixel_loss.sum() / mask.sum(), _sample_count
 
     (loss, sample_count), grads = jaxlie.manifold.value_and_grad(loss, has_aux=True)(params)
     updates, new_opt_state = optimizer.update(grads, opt_state, params)
