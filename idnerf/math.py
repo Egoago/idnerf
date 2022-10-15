@@ -4,8 +4,6 @@ import jax
 import jaxlie
 from jax import numpy as jnp
 
-from absl.flags import FLAGS
-
 from idnerf import base
 from jaxnerf.nerf import utils
 
@@ -47,11 +45,11 @@ def relative_transformations(T_cam2worlds: List[jaxlie.SE3]) -> Tuple[List[jaxli
 def twist_transformation(T_true: jaxlie.SE3, rng):
     rng, subkey = jax.random.split(rng, 2)
 
-    rotation_error = jaxlie.SO3.sample_uniform(rng).log() * FLAGS.perturbation_R
+    rotation_error = jaxlie.SO3.sample_uniform(rng).log() * base.FLAGS.perturbation_R
     translation_error = jax.random.uniform(key=subkey,
                                            shape=(3,),
                                            minval=-1.0,
-                                           maxval=1.0) * FLAGS.perturbation_t
+                                           maxval=1.0) * base.FLAGS.perturbation_t
     error = jaxlie.SE3.from_rotation_and_translation(rotation=jaxlie.SO3.exp(rotation_error),
                                                      translation=translation_error)
     T_init = error @ T_true
@@ -59,7 +57,7 @@ def twist_transformation(T_true: jaxlie.SE3, rng):
 
 
 def total_pixel_coords_xy(width: int, height: int) -> jnp.ndarray:
-    pixel_center = 0.5 if FLAGS.use_pixel_centers else 0.0
+    pixel_center = 0.5 if base.FLAGS.use_pixel_centers else 0.0
     xx, yy = jnp.meshgrid(jnp.arange(width, dtype=jnp.float32) + pixel_center,
                           jnp.arange(height, dtype=jnp.float32) + pixel_center,
                           indexing="ij")

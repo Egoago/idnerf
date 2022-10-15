@@ -3,7 +3,6 @@ import json
 import os
 
 import yaml
-from absl import flags
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
@@ -98,13 +97,13 @@ def save_data(data: base.Data, file_name):
 
 
 def save(data: base.Data, render_fn, rng, mode="grd"):
-    directory = flags.FLAGS.result_dir
+    directory = base.FLAGS.result_dir
     if not os.path.exists(directory):
         os.makedirs(directory)
     file_patterns = ['%06d-graph.png', '%06d-render.png', '%06d-data.json']
     test_id = max([__test_count(os.path.join(directory, file_pattern)) for file_pattern in file_patterns])
     file_paths = [os.path.join(directory, pattern % test_id) for pattern in file_patterns]
-    title = flags.FLAGS.test_name
+    title = base.FLAGS.test_name
     if title is None:
         title = f"Test {test_id}"
 

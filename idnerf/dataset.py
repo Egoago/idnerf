@@ -4,8 +4,7 @@ from typing import List, Tuple
 
 import jaxlie
 from PIL import Image
-from absl import logging, flags
-from absl.flags import FLAGS
+from absl import logging
 import jax.numpy as jnp
 
 from idnerf import base, math
@@ -17,13 +16,13 @@ def load_img(img_path):
 
 
 def load_rgbdm_img(dataset, idx) -> jnp.ndarray:
-    if flags.FLAGS.depth_param > 0.:
-        dir_path = os.path.join(flags.FLAGS.train_dir, flags.FLAGS.subset, 'test_preds2')
+    if base.FLAGS.depth_param > 0.:
+        dir_path = os.path.join(base.FLAGS.train_dir, base.FLAGS.subset, 'test_preds2')
         rgb = jnp.load(os.path.join(dir_path, f'{idx:03d}_rgb.npy'))
         depth = jnp.load(os.path.join(dir_path, f'{idx:03d}_depth.npy'))
-        mask = (jnp.mean(rgb, axis=-1) < (1. - 1e-4)) * (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
-    elif FLAGS.use_original_img:
-        path = os.path.join(FLAGS.data_dir, FLAGS.subset)
+        mask = (jnp.mean(rgb, axis=-1) < (1. - 1e-4)) * (depth > base.FLAGS.near) * (depth < base.FLAGS.far)
+    elif base.FLAGS.use_original_img:
+        path = os.path.join(base.FLAGS.data_dir, base.FLAGS.subset)
         img_name = dataset['frames'][idx]['file_path']
         rgb = load_img(os.path.join(path, img_name + '.png'))[:, :, :3]
         depth_path = glob.glob(os.path.join(path, img_name + '_depth_*.png'))
@@ -31,7 +30,7 @@ def load_rgbdm_img(dataset, idx) -> jnp.ndarray:
         depth = load_img(depth_path[0])[:, :, 0]
         mask = depth > 1e-4
     else:
-        path = os.path.join(FLAGS.train_dir, FLAGS.subset, 'test_preds')
+        path = os.path.join(base.FLAGS.train_dir, base.FLAGS.subset, 'test_preds')
         img_name = f'{idx:03d}.png'
         rgb = load_img(os.path.join(path, img_name))
         disp = load_img(os.path.join(path, 'disp_' + img_name))
@@ -69,7 +68,7 @@ def get_cam_params(dataset, img_shape):
 
 def load_dataset():
     import json
-    data_path = os.path.join(FLAGS.data_dir, FLAGS.subset, "transforms_test.json")
+    data_path = os.path.join(base.FLAGS.data_dir, base.FLAGS.subset, "transforms_test.json")
     with open(data_path, "r") as fp:
         dataset = json.load(fp)
     assert dataset is not None
@@ -81,7 +80,7 @@ def load_data(rng, all_frames=False):
     if all_frames:
         frames, T_true = load_frames(dataset, range(len(dataset['frames'])), load_imgs=False)
     else:
-        frames, T_true = load_frames(dataset, flags.FLAGS.frame_ids, load_imgs=True)
+        frames, T_true = load_frames(dataset, base.FLAGS.frame_ids, load_imgs=True)
     assert len(frames) > 0
 
     cam_params = get_cam_params(dataset, load_rgbdm_img(dataset, 0).shape)

@@ -5,14 +5,13 @@ import jax
 import jax.numpy as jnp
 import jaxlie
 import optax
-from absl import flags
 from tqdm import tqdm
 
 from idnerf import base, math, rendering, sampling
 
 
 def get_optimizer(scheduler):
-    optimizer = flags.FLAGS.optimizer
+    optimizer = base.FLAGS.optimizer
     if optimizer == "sgd":
         return optax.sgd(scheduler, 0.4, False)
     elif optimizer == "adam":
@@ -42,21 +41,21 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
     def loss(_params):
         T_pred = _params['T_pred']
         rays = math.transform_rays(rays_relative_to_base, T_pred)
-        rgb, depth = rendering.render_rays(render_fn, rays, rng, flags.FLAGS.coarse_opt)
+        rgb, depth = rendering.render_rays(render_fn, rays, rng, base.FLAGS.coarse_opt)
         #   TODO add depth
         #   TODO per_sample gradient
-        mask = (depth > flags.FLAGS.near) * (depth < flags.FLAGS.far)
+        mask = (depth > base.FLAGS.near) * (depth < base.FLAGS.far)
         _sample_count = jnp.count_nonzero(mask)
         pixel_loss = optax.huber_loss(rgb,
                                       rgbd_pixels[:, :3],
-                                      flags.FLAGS.huber_delta).mean(axis=-1)
-        if flags.FLAGS.depth_param > 0.:
-            pixel_loss = pixel_loss + flags.FLAGS.depth_param * optax.huber_loss(depth,
+                                      base.FLAGS.huber_delta).mean(axis=-1)
+        if base.FLAGS.depth_param > 0.:
+            pixel_loss = pixel_loss + base.FLAGS.depth_param * optax.huber_loss(depth,
                                                                                  rgbd_pixels[:, 3],
-                                                                                 flags.FLAGS.huber_delta)
+                                                                                 base.FLAGS.huber_delta)
         pixel_loss = pixel_loss * mask
-        if flags.FLAGS.clip_grad > 0.:
-            pixel_loss = clip_gradient(pixel_loss, flags.FLAGS.clip_grad)
+        if base.FLAGS.clip_grad > 0.:
+            pixel_loss = clip_gradient(pixel_loss, base.FLAGS.clip_grad)
         return pixel_loss.sum() / mask.sum(), _sample_count
 
     (loss, sample_count), grads = jaxlie.manifold.value_and_grad(loss, has_aux=True)(params)
@@ -67,9 +66,9 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
 
 def fit(data: base.Data, render_fn, rng):
     params = {'T_pred': deepcopy(data.T_init)}
-    scheduler = optax.exponential_decay(flags.FLAGS.lr_init,
-                                        flags.FLAGS.decay_steps,
-                                        flags.FLAGS.decay_rate)
+    scheduler = optax.exponential_decay(base.FLAGS.lr_init,
+                                        base.FLAGS.decay_steps,
+                                        base.FLAGS.decay_rate)
     optimizer = get_optimizer(scheduler)
     opt_state = optimizer.init(jaxlie.manifold.zero_tangents(params))
 
@@ -78,7 +77,7 @@ def fit(data: base.Data, render_fn, rng):
 
     print(f'|{"step":^5s}|{"loss":^7s}|{"t error":^7s}|{"R error":^7s}|{"Samples":^7s}|{"grads":^49s}|')
     rays_relative_to_base, rgbd_pixels = sampler.sample(rng)
-    for i in tqdm(range(flags.FLAGS.max_steps), desc='Optimalization', unit='step'):
+    for i in tqdm(range(base.FLAGS.max_steps), desc='Optimalization', unit='step'):
         rng, subkey_1, subkey_2 = jax.random.split(rng, 3)
         params, opt_state, loss, grads, sample_count = optimization_step(params, opt_state, subkey_2,
                                                                          render_fn, rays_relative_to_base, rgbd_pixels,
@@ -95,10 +94,10 @@ def fit(data: base.Data, render_fn, rng):
         history.R_error.append(R_error)
         history.sample_count.append(sample_count)
 
-        if flags.FLAGS.resample_rays:
+        if base.FLAGS.resample_rays:
             rays_relative_to_base, rgbd_pixels = sampler.sample(rng)
 
-        if i % flags.FLAGS.print_every == 0:
+        if i % base.FLAGS.print_every == 0:
             tqdm.write(f'|{i:5d}|{loss:7.4f}|{t_error:7.4f}|{R_error:7.4f}|{sample_count:7d}|{grads["T_pred"]}|')
     data.T_final = params['T_pred']
     data.history = history

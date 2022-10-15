@@ -1,11 +1,12 @@
-from absl import app, flags
+from absl import app
 import jax
 
 import idnerf
 
 
 def main(_):
-    rng = idnerf.init()
+    idnerf.load_flags()
+    rng = jax.random.PRNGKey(20221012)
     rng_keys = jax.random.split(rng, 5)
 
     data = idnerf.load_data(rng_keys[0])
@@ -15,7 +16,7 @@ def main(_):
     # rgb, depth = idnerf.render_img(render_fn, data.T_true @ data.frames[0].T_cam2base, data.cam_params, rng)
     # img = Image.fromarray(np.uint8(rgb * 255))
     # img.save('test9.png')
-    if flags.FLAGS.per_sample_gradient:
+    if idnerf.base.FLAGS.per_sample_gradient:
         raise NotImplementedError()  # TODO implement
     idnerf.fit(data, render_fn, rng_keys[3])
 

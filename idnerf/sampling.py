@@ -3,8 +3,6 @@ from typing import List, Tuple
 import jax
 import jax.numpy as jnp
 
-from absl import flags
-
 from idnerf import base, math
 from jaxnerf.nerf import utils
 
@@ -37,9 +35,9 @@ def __fast(rgbdm_img, pixel_count, rng):
 
 def sample_img(rgbdm_img, rng, method=None, pixel_count=None) -> jnp.ndarray:
     if method is None:
-        method = flags.FLAGS.pixel_sampling
+        method = base.FLAGS.pixel_sampling
     if pixel_count is None:
-        pixel_count = flags.FLAGS.pixel_count
+        pixel_count = base.FLAGS.pixel_count
     if method == 'total':
         pixel_coords_yx = math.total_pixel_coords_xy(rgbdm_img.shape[1], rgbdm_img.shape[0])
     elif method == 'random':
@@ -59,8 +57,8 @@ def sample_img(rgbdm_img, rng, method=None, pixel_count=None) -> jnp.ndarray:
 class Sampler:
     def __init__(self, data: base.Data):
         self.data = data
-        self.method = flags.FLAGS.pixel_sampling
-        self.pixels_per_img = flags.FLAGS.pixel_count // len(data.frames)
+        self.method = base.FLAGS.pixel_sampling
+        self.pixels_per_img = base.FLAGS.pixel_count // len(data.frames)
 
     @staticmethod
     def __concatenate_rays(rays_list: List[utils.Rays]) -> utils.Rays:

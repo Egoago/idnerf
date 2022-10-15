@@ -2,7 +2,6 @@ from typing import Tuple
 
 import jax
 import jaxlie
-from absl import flags
 from jax import numpy as jnp
 from tqdm import tqdm
 
@@ -22,8 +21,8 @@ def render_img(render_fun, T: jaxlie.SE3, cam_params: base.CameraParameters, rng
 
 def render_rays(render_fun, rays: utils.Rays, rng, coarse=False) -> Tuple[jnp.ndarray, jnp.ndarray]:
     rgb_list, depth_list = [], []
-    for i in tqdm(range(0, rays.directions.shape[0], flags.FLAGS.chunk), desc='Rendering', unit='chunk', leave=False):
-        chunk_rays = utils.namedtuple_map(lambda r: r[i:i + flags.FLAGS.chunk], rays)
+    for i in tqdm(range(0, rays.directions.shape[0], base.FLAGS.chunk), desc='Rendering', unit='chunk', leave=False):
+        chunk_rays = utils.namedtuple_map(lambda r: r[i:i + base.FLAGS.chunk], rays)
         rgb, depth = __render_chunk_rays(render_fun, chunk_rays, rng, coarse)
         rgb_list.append(rgb)
         depth_list.append(depth)
@@ -32,7 +31,7 @@ def render_rays(render_fun, rays: utils.Rays, rng, coarse=False) -> Tuple[jnp.nd
 
 def __render_chunk_rays(render_fun, rays: utils.Rays, rng, coarse):
     key_0, key_1 = jax.random.split(rng, 2)
-    if flags.FLAGS.distributed_render:
+    if base.FLAGS.distributed_render:
         host_id = jax.host_id()
         chunk_size = rays[0].shape[0]
         rays_remaining = chunk_size % jax.device_count()
