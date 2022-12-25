@@ -1,26 +1,27 @@
 dataset: blender
-subset: lego
+subset: chair
 frame_ids: [2, 3, 4, 5, 6, 7, 8, 9]
-data_dir: datasets/nerf_synthetic/
-train_dir: models/blender/
+data_dir: datasets/
+train_dir: models/
 result_dir: results/
-print_every: 10
+print_every: 50
 num_coarse_samples: 64
 num_fine_samples: 128
 white_bkgd: true
 randomized: false
 use_pixel_centers: false
 
-test_name: huge_error_8_img_with_depth
+test_name: None
 pixel_sampling: random
 distributed_render: true
 depth_param: 1.0
+rgb_param: 1.0
 per_sample_gradient: false
 use_original_img: false
 resample_rays: true
-coarse_opt: true
-perturbation_R: 0.3
-perturbation_t: 0.5
+coarse_opt: false
+perturbation_R: 0.1
+perturbation_t: 0.3
 pixel_count: 2048
 max_steps: 1000
 optimizer: adam

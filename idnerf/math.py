@@ -45,11 +45,17 @@ def relative_transformations(T_cam2worlds: List[jaxlie.SE3]) -> Tuple[List[jaxli
 def twist_transformation(T_true: jaxlie.SE3, rng):
     rng, subkey = jax.random.split(rng, 2)
 
-    rotation_error = jaxlie.SO3.sample_uniform(rng).log() * base.FLAGS.perturbation_R
+    rotation_error = jaxlie.SO3.sample_uniform(rng).log()
+    rotation_error = rotation_error / jnp.linalg.norm(rotation_error)
+    rotation_error = rotation_error * base.FLAGS.perturbation_R
+
     translation_error = jax.random.uniform(key=subkey,
                                            shape=(3,),
                                            minval=-1.0,
-                                           maxval=1.0) * base.FLAGS.perturbation_t
+                                           maxval=1.0)
+    translation_error = translation_error / jnp.linalg.norm(translation_error)
+    translation_error = translation_error * base.FLAGS.perturbation_t
+
     error = jaxlie.SE3.from_rotation_and_translation(rotation=jaxlie.SO3.exp(rotation_error),
                                                      translation=translation_error)
     T_init = error @ T_true
@@ -58,8 +64,8 @@ def twist_transformation(T_true: jaxlie.SE3, rng):
 
 def total_pixel_coords_xy(width: int, height: int) -> jnp.ndarray:
     pixel_center = 0.5 if base.FLAGS.use_pixel_centers else 0.0
-    xx, yy = jnp.meshgrid(jnp.arange(width, dtype=jnp.float32) + pixel_center,
-                          jnp.arange(height, dtype=jnp.float32) + pixel_center,
+    xx, yy = jnp.meshgrid(jnp.arange(height, dtype=jnp.float32) + pixel_center,
+                          jnp.arange(width, dtype=jnp.float32) + pixel_center,
                           indexing="ij")
     pixel_coords_yx = jnp.column_stack([xx.flatten(), yy.flatten()])
     return pixel_coords_yx
@@ -70,3 +76,32 @@ def compute_errors(T_true: jaxlie.SE3, T_pred: jaxlie.SE3):
     translation_error = jnp.linalg.norm(T_diff.translation()).tolist()
     rotation_error = jnp.linalg.norm(T_diff.rotation().log()).tolist()
     return translation_error, rotation_error
+
+
+def convert_to_ndc(rays: utils.Rays, cam_params: base.CameraParameters) -> utils.Rays:
+    """Convert a set of rays to NDC coordinates."""
+    origins = rays.origins
+    directions = rays.directions
+    focal = cam_params.focal
+    w = cam_params.width
+    h = cam_params.height
+    near = 1.
+    # Shift ray origins to near plane
+    t = -(near + origins[Ellipsis, 2]) / directions[Ellipsis, 2]
+    origins = origins + t[Ellipsis, None] * directions
+
+    dx, dy, dz = tuple(jnp.moveaxis(directions, -1, 0))
+    ox, oy, oz = tuple(jnp.moveaxis(origins, -1, 0))
+
+    # Projection
+    o0 = -((2 * focal) / w) * (ox / oz)
+    o1 = -((2 * focal) / h) * (oy / oz)
+    o2 = 1 + 2 * near / oz
+
+    d0 = -((2 * focal) / w) * (dx / dz - ox / oz)
+    d1 = -((2 * focal) / h) * (dy / dz - oy / oz)
+    d2 = -2 * near / oz
+
+    origins = jnp.stack([o0, o1, o2], -1)
+    directions = jnp.stack([d0, d1, d2], -1)
+    return utils.Rays(directions=directions, viewdirs=rays.viewdirs, origins=origins)

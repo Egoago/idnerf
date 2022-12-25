@@ -41,6 +41,8 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
     def loss(_params):
         T_pred = _params['T_pred']
         rays = math.transform_rays(rays_relative_to_base, T_pred)
+        #if base.FLAGS.dataset == 'llff':
+         #   rays = math.convert_to_ndc(rays, cam_params)
         rgb, depth = rendering.render_rays(render_fn, rays, rng, base.FLAGS.coarse_opt)
         #   TODO add depth
         #   TODO per_sample gradient
@@ -50,7 +52,7 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
                                       rgbd_pixels[:, :3],
                                       base.FLAGS.huber_delta).mean(axis=-1)
         if base.FLAGS.depth_param > 0.:
-            pixel_loss = pixel_loss + base.FLAGS.depth_param * optax.huber_loss(depth,
+            pixel_loss = base.FLAGS.rgb_param*pixel_loss + base.FLAGS.depth_param * optax.huber_loss(depth,
                                                                                  rgbd_pixels[:, 3],
                                                                                  base.FLAGS.huber_delta)
         pixel_loss = pixel_loss * mask
@@ -77,7 +79,7 @@ def fit(data: base.Data, render_fn, rng):
 
     print(f'|{"step":^5s}|{"loss":^7s}|{"t error":^7s}|{"R error":^7s}|{"Samples":^7s}|{"grads":^49s}|')
     rays_relative_to_base, rgbd_pixels = sampler.sample(rng)
-    for i in tqdm(range(base.FLAGS.max_steps), desc='Optimalization', unit='step'):
+    for i in tqdm(range(base.FLAGS.max_steps), desc='Optimalization', unit='step', leave=False):
         rng, subkey_1, subkey_2 = jax.random.split(rng, 3)
         params, opt_state, loss, grads, sample_count = optimization_step(params, opt_state, subkey_2,
                                                                          render_fn, rays_relative_to_base, rgbd_pixels,

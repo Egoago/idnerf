@@ -24,7 +24,9 @@ def load_model(rng, ray_count=None):
     sample_rays = {"rays": utils.to_device(sample_rays)}
     model, variables = models.get_model(rng, sample_rays, base.FLAGS)
     del variables
-    checkpoint_path = path.join(base.FLAGS.train_dir, base.FLAGS.subset)
+    checkpoint_path = path.join(base.FLAGS.train_dir,
+                                base.FLAGS.dataset,
+                                base.FLAGS.subset)
     variables = checkpoints.restore_checkpoint(checkpoint_path, None)['optimizer']['target']
     variables = jax.device_put(flax.core.freeze(variables))
 

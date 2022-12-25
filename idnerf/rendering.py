@@ -13,6 +13,8 @@ def render_img(render_fun, T: jaxlie.SE3, cam_params: base.CameraParameters, rng
     pixel_coords_yx = math.total_pixel_coords_xy(cam_params.width, cam_params.height)
     rays_cam = math.coords_to_local_rays(pixel_coords_yx, cam_params)
     rays_world = math.transform_rays(rays_cam, T)
+    if base.FLAGS.dataset == 'llff2':
+        rays_world = math.convert_to_ndc(rays_world, cam_params)
     rgb, depth = render_rays(render_fun, rays_world, rng, coarse)
     rgb = rgb.reshape((cam_params.height, cam_params.width, 3))
     depth = depth.reshape((cam_params.height, cam_params.width))

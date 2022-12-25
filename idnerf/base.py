@@ -41,19 +41,19 @@ class History:
 class Data:
     cam_params: CameraParameters
     frames: List[Frame]
-    T_true: jaxlie.SE3
-    T_init: jaxlie.SE3
+    T_true: Optional[jaxlie.SE3] = None
+    T_init: Optional[jaxlie.SE3] = None
     T_final: Optional[jaxlie.SE3] = None
     history: Optional[History] = None
 
     def to_dict(self):
         _dict = dict()
-        _dict['cam_params'] = asdict(self.cam_params)
+        _dict['cam_params'] = asdict(self.cam_params) if self.cam_params is not None else None
         _dict['frames'] = [frame.to_dict() for frame in self.frames]
         _dict['T_true'] = se3_to_dict(self.T_true)
         _dict['T_init'] = se3_to_dict(self.T_init)
         _dict['T_final'] = se3_to_dict(self.T_final)
-        _dict['history'] = asdict(self.history)
+        _dict['history'] = asdict(self.history) if self.history is not None else None
         return _dict
 
 
@@ -114,6 +114,7 @@ def load_flags():
     flags.DEFINE_float("huber_delta", 1.0, "", 0., 1.)
     flags.DEFINE_float("clip_grad", 0., "", 0., 10.)
     flags.DEFINE_float("depth_param", 0., "", 0., 10.)
+    flags.DEFINE_float("rgb_param", 1., "", 0., 10.)
     flags.DEFINE_integer("pixel_count", 128, "", 1, 16384)
     flags.DEFINE_integer("decay_steps", 100, "", 1, 16384)
     flags.DEFINE_integer("frame_idx", 0, "", 0, 16384)
@@ -127,10 +128,6 @@ def load_flags():
     if flags.FLAGS.config is not None:
         from jaxnerf.nerf import utils
         utils.update_flags(flags.FLAGS)
-    if flags.FLAGS.train_dir is None:
-        raise ValueError("train_dir must be set. None set now.")
-    if flags.FLAGS.data_dir is None:
-        raise ValueError("data_dir must be set. None set now.")
     if flags.FLAGS.result_dir is None:
         raise ValueError("data_dir must be set. None set now.")
 
@@ -140,5 +137,5 @@ def load_flags():
         except:
             return flags.FLAGS.__getattr__(key)
 
-    flags_dict = {key:getattribute(key) for key in flags.FLAGS._flags().keys()}
+    flags_dict = {key:getattribute(key) for key in flags.FLAGS.flag_values_dict().keys()}
     FLAGS = Flags(flags_dict)

@@ -1,10 +1,8 @@
 RGBD image sequence relocalization with Inverse Neural Radiance fields
 
 ==== TBD ====
-Depth
-no lr schedule
-longer plots
-init error normalised
+ray volume check
+depth hyperparameter test
 numeric check
 random-feature-patch
 BFGS-least squares
@@ -26,13 +24,18 @@ math multi depth
 
 
 ==== IN PROGRESS ====
+Depth
 Asserts? Sanity checks
 synthetic -> new dataset
 per pixel gradient per dim histogram
-SGD test
-One image convergence region
 
 ==== DONE ====
+no rgb depth test
+One image convergence region
+SGD test
+init error normalised
+longer plots
+no lr schedule
 fix relative transformations
 batching
 gradient clip before mean

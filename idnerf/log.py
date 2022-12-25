@@ -83,7 +83,7 @@ def save_data(data: base.Data, file_name):
     configs = __read_configs()
 
     data_dict = data.to_dict()
-    data_dict['configs'] = configs
+    data_dict['configs'] = {key:base.FLAGS.__getattr__(key) for key in configs.keys()}
 
     init_translation_error, init_rotation_error = math.compute_errors(data.T_true, data.T_init)
     final_translation_error, final_rotation_error = math.compute_errors(data.T_true, data.T_final)
@@ -96,7 +96,7 @@ def save_data(data: base.Data, file_name):
         json.dump(data_dict, fp)
 
 
-def save(data: base.Data, render_fn, rng, mode="grd"):
+def save(data: base.Data, render_fn, rng, mode="grd") -> int:
     directory = base.FLAGS.result_dir
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -113,3 +113,4 @@ def save(data: base.Data, render_fn, rng, mode="grd"):
         save_data(data, file_paths[2])
     if 'r' in mode:
         __save_render(data, file_paths[1], render_fn, rng)
+    return test_id
