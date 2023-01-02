@@ -4,7 +4,7 @@ import jax
 import jaxlie
 from jax import numpy as jnp
 
-from idnerf import base
+from bidnerf import base
 from jaxnerf.nerf import utils
 
 

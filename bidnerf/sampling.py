@@ -3,7 +3,7 @@ from typing import List, Tuple
 import jax
 import jax.numpy as jnp
 
-from idnerf import base, math
+from bidnerf import base, math
 from jaxnerf.nerf import utils
 
 

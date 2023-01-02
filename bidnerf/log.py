@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 
-from idnerf import math, base, rendering
+from bidnerf import math, base, rendering
 
 
 def __test_count(path_pattern):

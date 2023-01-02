@@ -1,26 +1,26 @@
 from absl import app
 import jax
 
-import idnerf
+import bidnerf
 
 
 def main(_):
-    idnerf.load_flags()
+    bidnerf.load_flags()
     rng = jax.random.PRNGKey(20221012)
     rng_keys = jax.random.split(rng, 5)
 
-    data = idnerf.load_data(rng_keys[0])
+    data = bidnerf.load_data(rng_keys[0])
 
-    render_fn = idnerf.load_model(rng_keys[2])
+    render_fn = bidnerf.load_model(rng_keys[2])
 
-    # rgb, depth = idnerf.render_img(render_fn, data.T_true @ data.frames[0].T_cam2base, data.cam_params, rng)
+    # rgb, depth = bidnerf.render_img(render_fn, data.T_true @ data.frames[0].T_cam2base, data.cam_params, rng)
     # img = Image.fromarray(np.uint8(rgb * 255))
     # img.save('test9.png')
-    if idnerf.base.FLAGS.per_sample_gradient:
+    if bidnerf.base.FLAGS.per_sample_gradient:
         raise NotImplementedError()  # TODO implement
-    idnerf.fit(data, render_fn, rng_keys[3])
+    bidnerf.fit(data, render_fn, rng_keys[3])
 
-    idnerf.save(data, render_fn, rng_keys[4], "gdr")
+    bidnerf.save(data, render_fn, rng_keys[4], "gdr")
 
 
 if __name__ == "__main__":

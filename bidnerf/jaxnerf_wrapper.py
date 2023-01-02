@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 from flax.training import checkpoints
 
-from idnerf import base
+from bidnerf import base
 from jaxnerf.nerf import utils, models
 
 

@@ -7,7 +7,7 @@ from PIL import Image
 from absl import logging
 import jax.numpy as jnp
 
-from idnerf import base, math
+from bidnerf import base, math
 
 
 @dataclass

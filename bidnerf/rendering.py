@@ -5,7 +5,7 @@ import jaxlie
 from jax import numpy as jnp
 from tqdm import tqdm
 
-from idnerf import base, math
+from bidnerf import base, math
 from jaxnerf.nerf import utils
 
 

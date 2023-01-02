@@ -7,7 +7,7 @@ import jaxlie
 import optax
 from tqdm import tqdm
 
-from idnerf import base, math, rendering, sampling
+from bidnerf import base, math, rendering, sampling
 
 
 def get_optimizer(scheduler):
