@@ -43,6 +43,7 @@ def relative_transformations(T_cam2worlds: List[jaxlie.SE3]) -> Tuple[List[jaxli
 
 
 def twist_transformation(T_true: jaxlie.SE3, rng):
+    """Applies a random noise on the given transofrmation."""
     rng, subkey = jax.random.split(rng, 2)
 
     rotation_error = jaxlie.SO3.sample_uniform(rng).log()

@@ -10,6 +10,7 @@ from jaxnerf.nerf import utils
 
 
 def render_img(render_fun, T: jaxlie.SE3, cam_params: base.CameraParameters, rng, coarse=False) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    """Render an image from the given pose."""
     pixel_coords_yx = math.total_pixel_coords_xy(cam_params.width, cam_params.height)
     rays_cam = math.coords_to_local_rays(pixel_coords_yx, cam_params)
     rays_world = math.transform_rays(rays_cam, T)

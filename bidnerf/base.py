@@ -9,6 +9,14 @@ import jax.numpy as jnp
 
 @dataclass
 class Frame:
+    """Frame to be rendered or registered.
+
+    Attributes:
+    T_cam2base (jaxlie.SE3): Pose of the frame
+    id (int): ID of the frame within the dataset
+    rgbdm_img (jnp.ndarray): 5 dimensional image for RGB, Depth and Mask channels
+
+    """
     T_cam2base: jaxlie.SE3
     id: int
     rgbdm_img: Optional[jnp.ndarray] = None
@@ -39,6 +47,9 @@ class History:
 
 @dataclass
 class Data:
+    """Contains all the information about a set of frames.
+
+    """
     cam_params: CameraParameters
     frames: List[Frame]
     T_true: Optional[jaxlie.SE3] = None
@@ -63,6 +74,9 @@ def se3_to_dict(T: jaxlie.SE3):
 
 
 class Flags(dict):
+    """Wrapper for the absl flags. Needed for mutability.
+
+    """
     def __init__(self, flags: dict):
         super().__init__()
         self.load(flags)

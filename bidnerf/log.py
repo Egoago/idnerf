@@ -97,6 +97,14 @@ def save_data(data: base.Data, file_name):
 
 
 def save(data: base.Data, render_fn, rng, mode="grd") -> int:
+    """Saves the registration results.
+
+    Mode determines the steps.
+    g: render graphs about the losses and such.
+    r: render the first and final images.
+    d: save the historical data in json files.
+
+    """
     directory = base.FLAGS.result_dir
     if not os.path.exists(directory):
         os.makedirs(directory)

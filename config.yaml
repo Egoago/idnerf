@@ -19,11 +19,11 @@ rgb_param: 1.0
 per_sample_gradient: false
 use_original_img: false
 resample_rays: true
-coarse_opt: false
+coarse_opt: true
 perturbation_R: 0.1
 perturbation_t: 0.3
 pixel_count: 2048
-max_steps: 1000
+max_steps: 300
 optimizer: adam
 lr_init: 0.02
 decay_steps: 1200

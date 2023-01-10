@@ -13,6 +13,7 @@ from jaxnerf.nerf import utils, models
 
 
 def load_model(rng, ray_count=None):
+    """Wrapper for the jaxnerf model loading."""
     if base.FLAGS.pixel_sampling == "total":
         assert ray_count is not None
     elif ray_count is None:

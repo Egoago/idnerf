@@ -67,6 +67,11 @@ def optimization_step(params, opt_state, rng, render_fn, rays_relative_to_base, 
 
 
 def fit(data: base.Data, render_fn, rng):
+    """Registers a set of images pose to a NeRF model.
+
+    All the needed data are packed into one data object.
+
+    """
     params = {'T_pred': deepcopy(data.T_init)}
     scheduler = optax.exponential_decay(base.FLAGS.lr_init,
                                         base.FLAGS.decay_steps,
